@@ -38,23 +38,18 @@ func NewStorage() (*Storage, error) {
 
 // list doctor with given id
 func (s *Storage) GetDoctor(id string) (listing.Doctor, error) {
-	// var d DoctorStaffUser
-	// var d2 Doctor
-
-	var doctor listing.Doctor
-
-	if row := s.DB.QueryRow(`
-	SELECT first_name, last_name, email, work_shift, specialization, doctors.id from users, staffs, doctors
-	WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id); row != nil {
-		if err := row.Scan(&doctor.FirstName, &doctor.LastName, &doctor.Email,
-			&doctor.WorkShift, &doctor.Specialization, &doctor.ID); err != nil {
-			return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
-		}
-		if row.Err() == sql.ErrNoRows {
-			return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
-		}
-		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", row))
-	}
+	// if row := s.DB.QueryRow(`
+	// SELECT first_name, last_name, email, work_shift, specialization, doctors.id from users, staffs, doctors
+	// WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id); row != nil {
+	// 	if err := row.Scan(&doctor.FirstName, &doctor.LastName, &doctor.Email,
+	// 		&doctor.WorkShift, &doctor.Specialization, &doctor.ID); err != nil {
+	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
+	// 	}
+	// 	if row.Err() == sql.ErrNoRows {
+	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
+	// 	}
+	// 	return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", row))
+	// }
 
 	// row := s.DB.QueryRow(`
 	// SELECT * FROM users, staffs, doctors
@@ -64,7 +59,7 @@ func (s *Storage) GetDoctor(id string) (listing.Doctor, error) {
 	// 	`SELECT * FROM users, staffs, doctors
 	// 	WHERE users.id = 1 AND staffs.id = 1 AND doctors.id = 1`)
 
-	
+	var doctor listing.Doctor
 
 	if row, _ := s.DB.Query(`SELECT * FROM users, staffs, doctors 
 							WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id); row != nil {

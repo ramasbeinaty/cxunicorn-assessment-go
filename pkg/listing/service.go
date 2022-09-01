@@ -12,13 +12,13 @@ type Repository interface {
 	GetDoctor(string) (Doctor, error)
 
 	// returns all doctors in storage
-	// GetAllDoctors() []Doctor
+	GetAllDoctors() []Doctor
 }
 
 // provide listing operations for struct doctor
 type Service interface {
 	GetDoctor(string) (Doctor, error)
-	// GetAllDoctors() []Doctor
+	GetAllDoctors() []Doctor
 }
 
 type service struct {
@@ -35,6 +35,6 @@ func (s *service) GetDoctor(id string) (Doctor, error) {
 	return s.repo.GetDoctor(id)
 }
 
-// func (s *service) GetAllDoctors() []Doctor {
-// 	return s.repo.GetAllDoctors()
-// }
+func (s *service) GetAllDoctors() []Doctor {
+	return s.repo.GetAllDoctors()
+}
