@@ -20,13 +20,6 @@ import (
 // 	return router
 // }
 
-// func GetAllDoctors(ls listing.Service) []listing.Doctor {
-// 	var doctors []json.Doctor
-// 	DB.Find(&doctors)
-
-// 	return doctors
-// }
-
 // a handler for GET /doctors/:id requests
 func GetDoctor(ls listing.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -41,21 +34,11 @@ func GetDoctor(ls listing.Service) gin.HandlerFunc {
 
 }
 
-// func GetDoctor(ctx *gin.Context) {
-// 	ctx.JSON(http.StatusOK, gin.H{
-// 		"data": "getting the doc!",
-// 	})
-
-// }
-
-// func GetDoctor(c *gin.Context, ls listing.Service) {
-// 	doctor, err := ls.GetDoctor(c.Params.ByName("id"))
-// 	if err == listing.ErrIdNotFound {
-// 		log.Fatal("ERROR: Was not able to find doc with given id - ", listing.ErrIdNotFound)
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"data": doctor,
-// 	})
-
-// }
+func GetAllDoctors(ls listing.Service) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		doctors := ls.GetAllDoctors()
+		ctx.JSON(http.StatusOK, gin.H{
+			"data": doctors,
+		})
+	}
+}

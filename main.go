@@ -25,6 +25,7 @@ func main() {
 	{
 		doctorRoute := superRoute.Group("/doctors")
 		{
+			doctorRoute.GET("/", handler.GetAllDoctors(lister))
 			doctorRoute.GET("/:id", handler.GetDoctor(lister))
 		}
 	}

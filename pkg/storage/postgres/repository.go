@@ -61,16 +61,42 @@ func (s *Storage) GetDoctor(id string) (listing.Doctor, error) {
 
 	var doctor listing.Doctor
 
-	if row, _ := s.DB.Query(`SELECT * FROM users, staffs, doctors 
-							WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id); row != nil {
-		if err := scan.RowStrict(&doctor, row); err != nil {
-			return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
-		}
-		if row.Err() == sql.ErrNoRows {
+	row, _ := s.DB.Query(`SELECT * FROM users, staffs, doctors 
+							WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id)
+
+	if err := scan.RowStrict(&doctor, row); err != nil {
+		if err == sql.ErrNoRows {
 			return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
 		}
+		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
 
 	}
 
 	return doctor, nil
+}
+
+func (s *Storage) GetAllDoctors() []listing.Doctor {
+	var doctors []listing.Doctor = []listing.Doctor{}
+
+	// rows, _ := s.DB.Query(`SELECT * FROM doctors, staffs, users
+	// 					   WHERE staffs.id = doctors.id AND users.id = doctors.id
+	// 						`)
+
+	rows, _ := s.DB.Query(`SELECT * FROM doctors
+						 	JOIN staffs ON doctors.id = staffs.id
+							JOIN users ON doctors.id = users.id
+							`)
+
+	if err := scan.RowsStrict(&doctors, rows); err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("Warning: GetAllDoctors", listing.ErrEmpty)
+			return doctors
+		}
+
+		fmt.Println("ERROR: GetAllDoctors - ", err)
+		return doctors
+	}
+
+	return doctors
+
 }

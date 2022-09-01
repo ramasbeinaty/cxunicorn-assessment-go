@@ -5,6 +5,7 @@ import (
 )
 
 var ErrIdNotFound = errors.New("Doctor with given id not found")
+var ErrEmpty = errors.New("No doctor was found")
 
 // provide access to the doctor storage
 type Repository interface {
