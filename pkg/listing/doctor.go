@@ -2,7 +2,7 @@ package listing
 
 // defines the doctor properties to be listed
 type Doctor struct {
-	ID             int32  `json:"id" db:"id"`
+	ID             int  `json:"id" db:"id"`
 	Specialization string `json:"specialization" db:"specialization"`
 
 	// properties stored in users struct

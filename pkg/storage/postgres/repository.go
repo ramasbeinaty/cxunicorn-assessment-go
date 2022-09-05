@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"clinicapp/pkg/booking"
 	"clinicapp/pkg/listing"
 	"errors"
 	"fmt"
@@ -62,7 +63,8 @@ func (s *Storage) GetDoctor(id string) (listing.Doctor, error) {
 	var doctor listing.Doctor
 
 	row, _ := s.DB.Query(`SELECT * FROM users, staffs, doctors 
-							WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id)
+							WHERE users.id = $1 AND 
+							staffs.id = $1 AND doctors.id = $1`, id)
 
 	if err := scan.RowStrict(&doctor, row); err != nil {
 		if err == sql.ErrNoRows {
@@ -99,4 +101,55 @@ func (s *Storage) GetAllDoctors() []listing.Doctor {
 
 	return doctors
 
+}
+
+func (s *Storage) CreateAppointment(a booking.Appointment) error {
+	// validate if doctor id exists
+	doctorExists := s.doctorExists(a.DoctorID)
+
+	if !doctorExists {
+		return errors.New("ERROR: CreateAppointment - doctor id does not exist. ")
+	}
+
+	// if validations come through, add the appointment to storage
+	row, err := s.DB.Query(`
+		INSERT INTO appointments (patient_id, doctor_id, created_by, start_datetime, 
+		end_datetime)
+		VALUES ($1, $2, $3, $4, $5)`,
+		a.PatientID, a.DoctorID, a.CreatedBy, a.StartDatetime, a.EndDatetime,
+	)
+
+	row.Close()
+
+	if err != nil {
+		fmt.Sprintln("ERROR: Create Appointment - ", err)
+		return errors.New(booking.Err.Error())
+	}
+
+	return nil
+}
+
+func (s *Storage) doctorExists(id int) bool {
+
+	var doctorID int
+
+	row, err := s.DB.Query(`SELECT id FROM doctors
+							WHERE doctors.id = $1`, id)
+
+	if err != nil {
+		fmt.Println("ERROR: doctorExists - Failed to execute query")
+		return false
+	}
+
+	if err = scan.RowStrict(&doctorID, row); err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("Warning: doctorExists - doctor id does not exist")
+			return false
+		}
+
+		fmt.Println("ERROR: doctorExists -", err)
+		return false
+	}
+
+	return true
 }

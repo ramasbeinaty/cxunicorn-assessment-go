@@ -1,12 +1,14 @@
 package main
 
 import (
+	"clinicapp/pkg/booking"
 	"clinicapp/pkg/config"
 	"clinicapp/pkg/handler"
 	"clinicapp/pkg/listing"
+	_ "clinicapp/pkg/migration"
 	"clinicapp/pkg/storage/postgres"
 
-	"github.com/gin-gonic/gin"
+	_ "github.com/gin-gonic/gin"
 )
 
 func init() {
@@ -14,21 +16,11 @@ func init() {
 }
 
 func main() {
-	// migration.MigrateUp()
 	// migration.MigrateDown()
+	// migration.MigrateUp()
 
 	s, _ := postgres.NewStorage()
 	lister := listing.NewService(s)
-	router := gin.Default()
-
-	superRoute := router.Group("/api")
-	{
-		doctorRoute := superRoute.Group("/doctors")
-		{
-			doctorRoute.GET("/", handler.GetAllDoctors(lister))
-			doctorRoute.GET("/:id", handler.GetDoctor(lister))
-		}
-	}
-
-	router.Run()
+	booker := booking.NewService(s)
+	handler.Handler(lister, booker)
 }

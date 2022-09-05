@@ -1,12 +1,13 @@
 package handler
 
 import (
+	"clinicapp/pkg/booking"
 	"clinicapp/pkg/listing"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Handler(ls listing.Service) {
+func Handler(ls listing.Service, bs booking.Service) {
 
 	router := gin.Default()
 
@@ -14,26 +15,15 @@ func Handler(ls listing.Service) {
 	{
 		doctorRoute := superRoute.Group("/doctors")
 		{
-			doctorRoute.GET("/", GetDoctor(ls))
+			doctorRoute.GET("/:id", GetDoctor(ls))
+			doctorRoute.GET("/", GetAllDoctors(ls))
+		}
+
+		appointmentRoute := superRoute.Group("/appointments")
+		{
+			appointmentRoute.POST("/", CreateAppointment(bs))
 		}
 	}
 
 	router.Run()
 }
-
-// func Handler(l listing.Service) *gin.Engine {
-// 	router := gin.Default()
-
-// 	superGroup := router.Group("/api")
-// 	{
-// 		doctorsGroup := superGroup.Group("/doctors")
-// 		{
-// 			doctorsGroup.Handlers
-// 		}
-// 	}
-
-// 	// router.GET("/doctors", getAllDoctors(l))
-// 	router.GET("/doctors/:id", Get)
-
-// 	return router
-// }

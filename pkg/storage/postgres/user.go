@@ -4,7 +4,7 @@ import "time"
 
 // defines the storage format of a user
 type User struct {
-	ID          int32     `json:"id" db:"id"`
+	ID          int     `json:"id" db:"id"`
 	FirstName   string    `json:"first_name" db:"users.first_name"`
 	LastName    string    `json:"last_name" db:"users.last_name"`
 	DOB         time.Time `json:"dob" db:"dob"`

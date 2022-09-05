@@ -13,6 +13,7 @@ func MigrateDown() {
 
 func deleteTables(db *sql.DB) {
 	dropTables := `
+		DROP TABLE appointments;
 		DROP TABLE doctors;
 		DROP TABLE clinic_admins;
 		DROP TABLE staffs;

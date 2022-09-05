@@ -34,7 +34,7 @@ func createTables(db *sql.DB) {
 			email varchar NOT NULL UNIQUE,
 			password varchar NOT NULL,
 			role role_type NOT NULL,
-			created_at timestamp NOT NULL DEFAULT (now()),
+			created_at timestamp WITH TIME ZONE NOT NULL DEFAULT (now()),
 			is_active boolean DEFAULT true,
 			is_verified boolean DEFAULT false
 		);
@@ -93,6 +93,23 @@ func createTables(db *sql.DB) {
 	`
 
 	_, err = db.Exec(createClinicAdminsTable)
+	if err != nil {
+		log.Fatal("Failed to create clinic_admins table - ", err)
+	}
+
+	createAppointmentsTable := `
+	CREATE TABLE appointments (
+		id serial PRIMARY KEY,
+		patient_id INTEGER NOT NULL,
+		doctor_id INTEGER NOT NULL,
+		created_by INTEGER NOT NULL,
+		created_at timestamp WITH TIME ZONE NOT NULL DEFAULT (now()),
+		start_datetime timestamp WITH TIME ZONE NOT NULL,
+		end_datetime timestamp WITH TIME ZONE NOT NULL,
+		is_canceled BOOLEAN DEFAULT FALSE
+	);`
+
+	_, err = db.Exec(createAppointmentsTable)
 	if err != nil {
 		log.Fatal("Failed to create clinic_admins table - ", err)
 	}
