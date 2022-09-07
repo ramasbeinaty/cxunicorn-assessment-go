@@ -37,11 +37,11 @@ func GetDoctor(ls listing.Service) gin.HandlerFunc {
 
 }
 
-// func GetAllDoctors(ls listing.Service) gin.HandlerFunc {
-// 	return func(ctx *gin.Context) {
-// 		doctors := ls.GetAllDoctors()
-// 		ctx.JSON(http.StatusOK, gin.H{
-// 			"data": doctors,
-// 		})
-// 	}
-// }
+func GetAllDoctors(ls listing.Service) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		doctors := ls.GetAllDoctors()
+		ctx.JSON(http.StatusOK, gin.H{
+			"data": doctors,
+		})
+	}
+}

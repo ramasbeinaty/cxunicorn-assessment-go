@@ -15,7 +15,7 @@ func Handler(ls listing.Service) {
 		doctorRoute := superRoute.Group("/doctors")
 		{
 			doctorRoute.GET("/:id", GetDoctor(ls))
-			// doctorRoute.GET("/", GetAllDoctors(ls))
+			doctorRoute.GET("/", GetAllDoctors(ls))
 		}
 
 		// appointmentRoute := superRoute.Group("/appointments")

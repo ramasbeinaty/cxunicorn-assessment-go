@@ -35,71 +35,74 @@ func NewStorage() (*Storage, error) {
 	return s, nil
 }
 
-// // get doctor with given id
-// func (s *Storage) GetDoctor(id string) (listing.Doctor, error) {
-// 	// if row := s.DB.QueryRow(`
-// 	// SELECT first_name, last_name, email, work_shift, specialization, doctors.id from users, staffs, doctors
-// 	// WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id); row != nil {
-// 	// 	if err := row.Scan(&doctor.FirstName, &doctor.LastName, &doctor.Email,
-// 	// 		&doctor.WorkShift, &doctor.Specialization, &doctor.ID); err != nil {
-// 	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
-// 	// 	}
-// 	// 	if row.Err() == sql.ErrNoRows {
-// 	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
-// 	// 	}
-// 	// 	return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", row))
-// 	// }
+func (s *Storage) GetDoctor(id int) (Doctor, error) {
+	var doctor Doctor
 
-// 	// row := s.DB.QueryRow(`
-// 	// SELECT * FROM users, staffs, doctors
-// 	// WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id)
+	row := s.DB.QueryRow(`SELECT d.*, s.*, u.* FROM doctors AS d
+				JOIN staffs AS s ON s.id = d.id
+				JOIN users AS u ON u.id = d.id
+				WHERE d.id = $1`, id)
 
-// 	// scanning := structscanner.Select(s.DB, &d, "",
-// 	// 	`SELECT * FROM users, staffs, doctors
-// 	// 	WHERE users.id = 1 AND staffs.id = 1 AND doctors.id = 1`)
+	// err := scan.RowStrict(&doctor, row)
 
-// 	var doctor listing.Doctor
+	if err := row.Scan(&doctor.ID, &doctor.Specialization, &doctor.ID,
+		&doctor.WorkDays, &doctor.WorkTime, &doctor.BreakTime,
+		&doctor.ID, &doctor.FirstName, &doctor.LastName, &doctor.DOB,
+		&doctor.PhoneNumber, &doctor.Email, &doctor.Password, &doctor.Role,
+		&doctor.CreatedAt, &doctor.IsActive, &doctor.IsVerified); err != nil {
+		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
+	}
 
-// 	row, _ := s.DB.Query(`SELECT * FROM users, staffs, doctors
-// 							WHERE users.id = $1 AND
-// 							staffs.id = $1 AND doctors.id = $1`, id)
+	return doctor, nil
+}
 
-// 	if err := scan.RowStrict(&doctor, row); err != nil {
-// 		if err == sql.ErrNoRows {
-// 			return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
-// 		}
-// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
+func (s *Storage) GetAllDoctors() []Doctor {
+	var doctors []Doctor = []Doctor{}
 
-// 	}
+	// rows, _ := s.DB.Query(`SELECT * FROM doctors, staffs, users
+	// 					   WHERE staffs.id = doctors.id AND users.id = doctors.id
+	// 						`)
 
-// 	return doctor, nil
-// }
+	rows, err := s.DB.Query(`SELECT * FROM doctors
+						 	JOIN staffs ON doctors.id = staffs.id
+							JOIN users ON doctors.id = users.id
+							`)
+	if err != nil {
+		fmt.Println("GetAllDoctors - Was not able to execute query", err.Error())
+		return doctors
+	}
 
-// func (s *Storage) GetAllDoctors() []listing.Doctor {
-// 	var doctors []listing.Doctor = []listing.Doctor{}
+	defer rows.Close()
 
-// 	// rows, _ := s.DB.Query(`SELECT * FROM doctors, staffs, users
-// 	// 					   WHERE staffs.id = doctors.id AND users.id = doctors.id
-// 	// 						`)
+	for rows.Next() {
+		var doctor Doctor
 
-// 	rows, _ := s.DB.Query(`SELECT * FROM doctors
-// 						 	JOIN staffs ON doctors.id = staffs.id
-// 							JOIN users ON doctors.id = users.id
-// 							`)
+		if err = rows.Scan(&doctor.ID, &doctor.Specialization, &doctor.ID,
+			&doctor.WorkDays, &doctor.WorkTime, &doctor.BreakTime,
+			&doctor.ID, &doctor.FirstName, &doctor.LastName, &doctor.DOB,
+			&doctor.PhoneNumber, &doctor.Email, &doctor.Password, &doctor.Role,
+			&doctor.CreatedAt, &doctor.IsActive, &doctor.IsVerified); err != nil {
+			fmt.Println("ERROR: GetAllDoctors - ", err)
+			return doctors
+		}
 
-// 	if err := scan.RowsStrict(&doctors, rows); err != nil {
-// 		if err == sql.ErrNoRows {
-// 			fmt.Println("Warning: GetAllDoctors", listing.ErrEmpty)
-// 			return doctors
-// 		}
+		doctors = append(doctors, doctor)
+	}
 
-// 		fmt.Println("ERROR: GetAllDoctors - ", err)
-// 		return doctors
-// 	}
+	if err := rows.Err(); err != nil {
+		fmt.Println("GetAllDoctors - Was not able to scan rows", err.Error())
+		return doctors
+	}
 
-// 	return doctors
+	// if err := scan.RowsStrict(&doctors, rows); err != nil {
+	// 	if err == sql.ErrNoRows {
+	// 		fmt.Println("Warning: GetAllDoctors - No doctors exist")
+	// 		return doctors
+	// 	}
 
-// }
+	return doctors
+
+}
 
 // func (s *Storage) CreateAppointment(a booking.Appointment) error {
 
@@ -141,30 +144,42 @@ func (s *Storage) DoctorExists(id int) bool {
 	return true
 }
 
-func (s *Storage) GetDoctor(id int) (Doctor, error) {
-	var doctor Doctor
+// // get doctor with given id
+// func (s *Storage) GetDoctor(id string) (listing.Doctor, error) {
+// 	// if row := s.DB.QueryRow(`
+// 	// SELECT first_name, last_name, email, work_shift, specialization, doctors.id from users, staffs, doctors
+// 	// WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id); row != nil {
+// 	// 	if err := row.Scan(&doctor.FirstName, &doctor.LastName, &doctor.Email,
+// 	// 		&doctor.WorkShift, &doctor.Specialization, &doctor.ID); err != nil {
+// 	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
+// 	// 	}
+// 	// 	if row.Err() == sql.ErrNoRows {
+// 	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
+// 	// 	}
+// 	// 	return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", row))
+// 	// }
 
-	// var str string
+// 	// row := s.DB.QueryRow(`
+// 	// SELECT * FROM users, staffs, doctors
+// 	// WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id)
 
-	// rows := s.DB.QueryRow(`SELECT first_name FROM users where users.id = $1`, id)
-	// rows.Scan(&str)
+// 	// scanning := structscanner.Select(s.DB, &d, "",
+// 	// 	`SELECT * FROM users, staffs, doctors
+// 	// 	WHERE users.id = 1 AND staffs.id = 1 AND doctors.id = 1`)
 
-	row := s.DB.QueryRow(`SELECT d.*, s.*, u.* FROM doctors AS d
-				JOIN staffs AS s ON s.id = d.id
-				JOIN users AS u ON u.id = d.id
-				WHERE d.id = $1`, id)
+// 	var doctor listing.Doctor
 
-	// err := scan.RowStrict(&doctor, row)
+// 	row, _ := s.DB.Query(`SELECT * FROM users, staffs, doctors
+// 							WHERE users.id = $1 AND
+// 							staffs.id = $1 AND doctors.id = $1`, id)
 
-	// var workTime PgTime
+// 	if err := scan.RowStrict(&doctor, row); err != nil {
+// 		if err == sql.ErrNoRows {
+// 			return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
+// 		}
+// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
 
-	if err := row.Scan(&doctor.ID, &doctor.Specialization, &doctor.ID,
-		&doctor.WorkDays, &doctor.WorkTime, &doctor.BreakTime,
-		&doctor.ID, &doctor.FirstName, &doctor.LastName, &doctor.DOB,
-		&doctor.PhoneNumber, &doctor.Email, &doctor.Password, &doctor.Role,
-		&doctor.CreatedAt, &doctor.IsActive, &doctor.IsVerified); err != nil {
-		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
-	}
+// 	}
 
-	return doctor, nil
-}
+// 	return doctor, nil
+// }

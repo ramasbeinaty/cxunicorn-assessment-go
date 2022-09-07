@@ -14,13 +14,13 @@ type Repository interface {
 	GetDoctor(int) (postgres.Doctor, error)
 
 	// returns all doctors in storage
-	// GetAllDoctors() []Doctor
+	GetAllDoctors() []postgres.Doctor
 }
 
 // provide listing operations for struct doctor
 type Service interface {
 	GetDoctor(int) (Doctor, error)
-	// GetAllDoctors() []Doctor
+	GetAllDoctors() []Doctor
 }
 
 type service struct {
@@ -53,6 +53,23 @@ func (s *service) GetDoctor(id int) (Doctor, error) {
 	return doctor, nil
 }
 
-// func (s *service) GetAllDoctors() []Doctor {
-// 	return s.repo.GetAllDoctors()
-// }
+func (s *service) GetAllDoctors() []Doctor {
+	var _doctors []postgres.Doctor
+	var doctors []Doctor = []Doctor{}
+
+	_doctors = s.repo.GetAllDoctors()
+
+	for _, _doctor := range _doctors {
+		var doctor Doctor
+
+		doctor.ID = _doctor.ID
+		doctor.Email = _doctor.Email
+		doctor.FirstName = _doctor.FirstName
+		doctor.LastName = _doctor.LastName
+		doctor.Specialization = _doctor.Specialization
+
+		doctors = append(doctors, doctor)
+	}
+
+	return doctors
+}
