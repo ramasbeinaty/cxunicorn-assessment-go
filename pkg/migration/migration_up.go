@@ -59,10 +59,22 @@ func createTables(db *sql.DB) {
 		log.Fatal("Failed to create patients table - ", err)
 	}
 
+	// createStaffsTable := `
+	// 	CREATE TABLE staffs (
+	// 		id serial NOT NULL UNIQUE,
+	// 		work_days TEXT[] NOT NULL,
+	// 		work_time TIME WITH TIME ZONE[] NOT NULL,
+	// 		break_time TIME WITH TIME ZONE[] NOT NULL,
+	// 		unavailable_datetimes TIMESTAMP WITH TIME ZONE[][],
+	// 		CONSTRAINT FK_id FOREIGN KEY (id) REFERENCES users(id)
+	// 	);
+	// `
 	createStaffsTable := `
 		CREATE TABLE staffs (
 			id serial NOT NULL UNIQUE,
-			work_shift varchar NOT NULL,
+			work_days TEXT[] NOT NULL,
+			work_time TIME WITH TIME ZONE[] NOT NULL,
+			break_time TIME WITH TIME ZONE[] NOT NULL,
 			CONSTRAINT FK_id FOREIGN KEY (id) REFERENCES users(id)
 		);
 	`
@@ -217,25 +229,72 @@ func populateTables(db *sql.DB) {
 	insertStaffs := `
 	INSERT INTO staffs (
 		id,
-		work_shift
+		work_days,
+		work_time,
+		break_time
 	) VALUES (
-		'1',
-		'morning_shift'
+		1,
+		'{Mon, Tues, Wed}',
+		'{8:00:00Z, 18:00:00Z}',
+		'{13:00:00Z, 14:00:00Z}'
 	),
 	(
-		'2',
-		'night_shift'
+		2,
+		'{Sat, Tues, Wed}',
+		'{8:00:00Z, 18:00:00Z}',
+		'{13:00:00Z, 14:00:00Z}'
 	),
 	(
-		'3',
-		'morning_shift'
+		3,
+		'{Fri, Sat, Sun}',
+		'{8:00:00Z, 18:00:00Z}',
+		'{13:00:00Z, 14:00:00Z}'
 	),
 	(
-		'6',
-		'morning_shift'
+		6,
+		'{Fri, Sat, Sun}',
+		'{8:00:00Z, 18:00:00Z}',
+		'{13:00:00Z, 14:00:00Z}'
 	)
 
 	`
+	// insertStaffs := `
+	// INSERT INTO staffs (
+	// 	id,
+	// 	work_days,
+	// 	work_time,
+	// 	break_time,
+	// 	unavailable_datetimes
+	// ) VALUES (
+	// 	1,
+	// 	'{Mon, Tues, Wed}',
+	// 	'18:00:00+04:00',
+	// 	'{13:00:00+04:00, 14:00:00+04:00}',
+	// 	'{}'
+	// ),
+	// (
+	// 	2,
+	// 	'{Sat, Tues, Wed}',
+	// 	'18:00:00+04:00',
+	// 	'{13:00:00+04:00, 14:00:00+04:00}',
+	// 	'{}'
+	// ),
+	// (
+	// 	3,
+	// 	'{Fri, Sat, Sun}',
+	// 	'18:00:00+04:00',
+	// 	'{13:00:00+04:00, 14:00:00+04:00}',
+	// 	'{}'
+	// ),
+	// (
+	// 	6,
+	// 	'{Fri, Sat, Sun}',
+	// 	'18:00+04:00',
+	// 	'{13:00:00+04:00, 14:00:00+04:00}',
+	// 	'{}'
+	// )
+
+	// `
 
 	_, err = db.Exec(insertStaffs)
 	if err != nil {

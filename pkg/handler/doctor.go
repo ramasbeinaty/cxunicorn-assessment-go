@@ -4,6 +4,7 @@ import (
 	"clinicapp/pkg/listing"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +24,9 @@ import (
 // a handler for GET /doctors/:id requests
 func GetDoctor(ls listing.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		doctor, err := ls.GetDoctor(ctx.Params.ByName("id"))
+		doctor_id, _ := strconv.Atoi(ctx.Params.ByName("id"))
+
+		doctor, err := ls.GetDoctor(doctor_id)
 		if err == listing.ErrIdNotFound {
 			ctx.Error(errors.New("Get Doctor - " + listing.ErrIdNotFound.Error()))
 		}
@@ -34,11 +37,11 @@ func GetDoctor(ls listing.Service) gin.HandlerFunc {
 
 }
 
-func GetAllDoctors(ls listing.Service) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		doctors := ls.GetAllDoctors()
-		ctx.JSON(http.StatusOK, gin.H{
-			"data": doctors,
-		})
-	}
-}
+// func GetAllDoctors(ls listing.Service) gin.HandlerFunc {
+// 	return func(ctx *gin.Context) {
+// 		doctors := ls.GetAllDoctors()
+// 		ctx.JSON(http.StatusOK, gin.H{
+// 			"data": doctors,
+// 		})
+// 	}
+// }

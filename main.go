@@ -1,11 +1,9 @@
 package main
 
 import (
-	"clinicapp/pkg/booking"
 	"clinicapp/pkg/config"
 	"clinicapp/pkg/handler"
 	"clinicapp/pkg/listing"
-	_ "clinicapp/pkg/migration"
 	"clinicapp/pkg/storage/postgres"
 
 	_ "github.com/gin-gonic/gin"
@@ -21,6 +19,7 @@ func main() {
 
 	s, _ := postgres.NewStorage()
 	lister := listing.NewService(s)
-	booker := booking.NewService(s)
-	handler.Handler(lister, booker)
+	// booker := booking.NewService(s)
+	// handler.Handler(lister, booker)
+	handler.Handler(lister)
 }

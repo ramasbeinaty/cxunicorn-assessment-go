@@ -1,6 +1,7 @@
 package listing
 
 import (
+	"clinicapp/pkg/storage/postgres"
 	"errors"
 )
 
@@ -10,16 +11,16 @@ var ErrEmpty = errors.New("no doctor was found")
 // provide access to the doctor storage
 type Repository interface {
 	// returns a doctor with given id
-	GetDoctor(string) (Doctor, error)
+	GetDoctor(int) (postgres.Doctor, error)
 
 	// returns all doctors in storage
-	GetAllDoctors() []Doctor
+	// GetAllDoctors() []Doctor
 }
 
 // provide listing operations for struct doctor
 type Service interface {
-	GetDoctor(string) (Doctor, error)
-	GetAllDoctors() []Doctor
+	GetDoctor(int) (Doctor, error)
+	// GetAllDoctors() []Doctor
 }
 
 type service struct {
@@ -32,10 +33,26 @@ func NewService(repo Repository) Service {
 }
 
 // implement service methods
-func (s *service) GetDoctor(id string) (Doctor, error) {
-	return s.repo.GetDoctor(id)
+func (s *service) GetDoctor(id int) (Doctor, error) {
+	var d postgres.Doctor
+	var doctor Doctor
+	var err error
+
+	d, err = s.repo.GetDoctor(id)
+
+	doctor.ID = d.ID
+	doctor.Email = d.Email
+	doctor.FirstName = d.FirstName
+	doctor.LastName = d.LastName
+	doctor.Specialization = d.Specialization
+
+	if err != nil {
+		return doctor, errors.New("GetDoctor - " + err.Error())
+	}
+
+	return doctor, nil
 }
 
-func (s *service) GetAllDoctors() []Doctor {
-	return s.repo.GetAllDoctors()
-}
+// func (s *service) GetAllDoctors() []Doctor {
+// 	return s.repo.GetAllDoctors()
+// }
