@@ -1,16 +1,18 @@
 package postgres
 
 import (
+	"clinicapp/pkg/storage/postgres/utils"
+
 	"github.com/lib/pq"
 )
 
 // defines the storage format of a staff
 type Staff struct {
 	User
-	ID        int            `json:"id" db:"id"`
-	WorkDays  pq.StringArray `json:"work_days" db:"work_days"`
-	WorkTime  TimeArray      `json:"work_time" db:"work_time"`
-	BreakTime TimeArray      `json:"break_time" db:"break_time"`
+	ID        int             `json:"id" db:"id"`
+	WorkDays  pq.StringArray  `json:"work_days" db:"work_days"`
+	WorkTime  utils.TimeArray `json:"work_time" db:"work_time"`
+	BreakTime utils.TimeArray `json:"break_time" db:"break_time"`
 }
 
 // type Staff struct {
