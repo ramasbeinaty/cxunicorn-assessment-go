@@ -22,6 +22,7 @@ func Handler(ls listing.Service, bs booking.Service) {
 		appointmentRoute := superRoute.Group("/appointments")
 		{
 			appointmentRoute.POST("/", CreateAppointment(bs))
+			appointmentRoute.GET("/", GetAllAppointmentsOfDoctor(ls))
 		}
 	}
 

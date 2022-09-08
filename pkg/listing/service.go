@@ -3,6 +3,7 @@ package listing
 import (
 	"clinicapp/pkg/storage/postgres"
 	"errors"
+	"time"
 )
 
 var ErrIdNotFound = errors.New("doctor with given id not found")
@@ -15,12 +16,16 @@ type Repository interface {
 
 	// returns all doctors in storage
 	GetAllDoctors() []postgres.Doctor
+
+	// returns all the appointments of a specific doctor
+	GetAllAppointmentsOfDoctor(int, time.Time) []postgres.Appointment
 }
 
 // provide listing operations for struct doctor
 type Service interface {
 	GetDoctor(int) (Doctor, error)
 	GetAllDoctors() []Doctor
+	GetAllAppointmentsOfDoctor(int, time.Time) []Appointment
 }
 
 type service struct {
@@ -72,4 +77,24 @@ func (s *service) GetAllDoctors() []Doctor {
 	}
 
 	return doctors
+}
+
+func (s *service) GetAllAppointmentsOfDoctor(doctor_id int, date time.Time) []Appointment {
+	var _appointments []postgres.Appointment
+	var appointments []Appointment = []Appointment{}
+
+	_appointments = s.repo.GetAllAppointmentsOfDoctor(doctor_id, date)
+
+	for _, _appointment := range _appointments {
+		var appointment Appointment
+
+		appointment.ID = _appointment.ID
+		appointment.DoctorID = _appointment.DoctorID
+		appointment.CreatedBy = _appointment.CreatedBy
+		appointment.CreatedAt = _appointment.CreatedAt
+		appointment.StartDatetime = _appointment.StartDatetime
+		appointment.EndDatetime = _appointment.EndDatetime
+	}
+
+	return appointments
 }

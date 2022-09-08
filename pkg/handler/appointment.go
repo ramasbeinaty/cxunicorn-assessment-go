@@ -2,18 +2,17 @@ package handler
 
 import (
 	"clinicapp/pkg/booking"
+	"clinicapp/pkg/listing"
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 func CreateAppointment(bs booking.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var hi = ctx.PostForm("data")
-		var bye = ctx.PostForm("patient_id")
-
-		_ = hi
-		_ = bye
+		// var hi = ctx.PostForm("data")
+		// var bye = ctx.PostForm("patient_id")
 
 		var appointment booking.Appointment
 
@@ -32,4 +31,21 @@ func CreateAppointment(bs booking.Service) gin.HandlerFunc {
 
 	}
 
+}
+
+func GetAllAppointmentsOfDoctor(ls listing.Service) gin.HandlerFunc {
+	var appointments []listing.Appointment
+
+	return func(ctx *gin.Context) {
+		// _doctor_id := ctx.Query("doctor_id")
+		// date:= ctx.Query("date")
+
+		// if _doctor_id != "" && date != "" {
+		// 	doctor_id, _ := strconv.Atoi(_doctor_id)
+		// 	appointments = ls.GetAllAppointmentsOfDoctor(doctor_id, date)
+		// }
+		ctx.JSON(http.StatusOK, gin.H{
+			"data": appointments,
+		})
+	}
 }

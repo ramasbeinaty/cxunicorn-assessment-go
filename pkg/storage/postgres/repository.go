@@ -113,7 +113,7 @@ func (s *Storage) GetAppointments() []Appointment {
 
 func (s *Storage) CreateAppointment(a AppointmentCreate) error {
 
-	row, err := s.DB.Query(`
+	rows, err := s.DB.Query(`
 		INSERT INTO appointments (patient_id, doctor_id, created_by, start_datetime,
 		end_datetime)
 		VALUES ($1, $2, $3, $4, $5)`,
@@ -121,14 +121,10 @@ func (s *Storage) CreateAppointment(a AppointmentCreate) error {
 	)
 
 	if err != nil {
-		return errors.New("ERROR: GetAllDoctors - Was not able to execute query" + err.Error())
-	}
-
-	defer row.Close()
-
-	if err != nil {
 		return errors.New("ERROR: Create Appointment - " + err.Error())
 	}
+
+	defer rows.Close()
 
 	return nil
 }
@@ -159,10 +155,10 @@ func (s *Storage) GetNumberOfAppointmentsWithDistinctPatient(doctor_id int, date
 	var appointments_count int = 0
 
 	row := s.DB.QueryRow(`
-	SELECT COUNT(DISTINCT(patient_id, doctor_id))
-	FROM appointments a
-	WHERE CAST(a.start_datetime as DATE) = CAST($1 as DATE)
-	`, date)
+		SELECT COUNT(DISTINCT(patient_id, doctor_id))
+		FROM appointments a
+		WHERE CAST(a.start_datetime as DATE) = CAST($1 as DATE)
+		`, date)
 
 	if err := row.Scan(&appointments_count); err != nil {
 		fmt.Println("GetNumberOfAppointmentsWithDistinctPatient - ", err)
@@ -170,6 +166,43 @@ func (s *Storage) GetNumberOfAppointmentsWithDistinctPatient(doctor_id int, date
 	}
 
 	return appointments_count
+
+}
+
+func (s *Storage) GetAllAppointmentsOfDoctor(doctor_id int, date time.Time) []Appointment {
+	var appointments []Appointment
+
+	rows, err := s.DB.Query(`
+		SELECT * 
+		FROM appointments a
+		WHERE a.doctors_id = $1	AND CAST(a.start_datetime as DATE) = CAST($2 as DATE)`, doctor_id, date)
+
+	if err != nil {
+		fmt.Println("GetAllAppointment - Was not able to execute query", err.Error())
+		return appointments
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var appointment Appointment
+
+		if err = rows.Scan(&appointment.ID, &appointment.PatientID, &appointment.DoctorID,
+			&appointment.CreatedAt, &appointment.CreatedBy, &appointment.StartDatetime,
+			&appointment.EndDatetime, &appointment.IsCanceled); err != nil {
+			fmt.Println("ERROR: GetAllAppointment - ", err)
+			return appointments
+		}
+
+		appointments = append(appointments, appointment)
+	}
+
+	if err := rows.Err(); err != nil {
+		fmt.Println("GetAllAppointment - Was not able to scan rows", err.Error())
+		return appointments
+	}
+
+	return appointments
 
 }
 
