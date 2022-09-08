@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"database/sql"
 
@@ -104,24 +105,33 @@ func (s *Storage) GetAllDoctors() []Doctor {
 
 }
 
-// func (s *Storage) CreateAppointment(a booking.Appointment) error {
+func (s *Storage) GetAppointments() []Appointment {
+	var appointments []Appointment
 
-// 	row, err := s.DB.Query(`
-// 		INSERT INTO appointments (patient_id, doctor_id, created_by, start_datetime,
-// 		end_datetime)
-// 		VALUES ($1, $2, $3, $4, $5)`,
-// 		a.PatientID, a.DoctorID, a.CreatedBy, a.StartDatetime, a.EndDatetime,
-// 	)
+	return appointments
+}
 
-// 	row.Close()
+func (s *Storage) CreateAppointment(a AppointmentCreate) error {
 
-// 	if err != nil {
-// 		fmt.Sprintln("ERROR: Create Appointment - ", err)
-// 		return errors.New(booking.Err.Error())
-// 	}
+	row, err := s.DB.Query(`
+		INSERT INTO appointments (patient_id, doctor_id, created_by, start_datetime,
+		end_datetime)
+		VALUES ($1, $2, $3, $4, $5)`,
+		a.PatientID, a.DoctorID, a.CreatedBy, a.StartDatetime, a.EndDatetime,
+	)
 
-// 	return nil
-// }
+	if err != nil {
+		return errors.New("ERROR: GetAllDoctors - Was not able to execute query" + err.Error())
+	}
+
+	defer row.Close()
+
+	if err != nil {
+		return errors.New("ERROR: Create Appointment - " + err.Error())
+	}
+
+	return nil
+}
 
 func (s *Storage) DoctorExists(id int) bool {
 
@@ -142,6 +152,25 @@ func (s *Storage) DoctorExists(id int) bool {
 
 	fmt.Println("INFO: doctorExists - doctor id exists")
 	return true
+}
+
+// get the number of appointments a doctor has with unique patients in a given date
+func (s *Storage) GetNumberOfAppointmentsWithDistinctPatient(doctor_id int, date time.Time) int {
+	var appointments_count int = 0
+
+	row := s.DB.QueryRow(`
+	SELECT COUNT(DISTINCT(patient_id, doctor_id))
+	FROM appointments a
+	WHERE CAST(a.start_datetime as DATE) = CAST($1 as DATE)
+	`, date)
+
+	if err := row.Scan(&appointments_count); err != nil {
+		fmt.Println("GetNumberOfAppointmentsWithDistinctPatient - ", err)
+		return appointments_count
+	}
+
+	return appointments_count
+
 }
 
 // // get doctor with given id
