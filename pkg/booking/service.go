@@ -18,6 +18,9 @@ type Repository interface {
 
 	// to validate doctor does not have more than 12 appoointments with different patients per day
 	GetNumberOfAppointmentsWithDistinctPatient(int, time.Time) int
+
+	// to validate doctors have less than 8 hours of appointments per day
+	GetAppointmentHoursPerDay(int, time.Time) int
 }
 
 // provide booking operations for struct appointment
@@ -75,10 +78,17 @@ func (s *service) CreateAppointment(a Appointment) error {
 	}
 
 	// validate doctor does not have more than 8 hours per day
+	appointment_hours := s.repo.GetAppointmentHoursPerDay(a.DoctorID, a.StartDatetime)
+	if appointment_hours > 8 {
+		return errors.New("ERROR: CreateAppointment - doctor cannot have more than 8 hours in a day")
+	}
 
 	// appointment must be within the work time of the doctor
+	
 
 	// appointment can not be during doctor's break time
+
+	// appointment should not conflict with others
 
 	// if validations come through, add the appointment to storage
 	var appointments postgres.AppointmentCreate

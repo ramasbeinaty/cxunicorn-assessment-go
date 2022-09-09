@@ -2,7 +2,10 @@ package main
 
 import (
 	"clinicapp/pkg/booking"
+	"clinicapp/pkg/canceling"
 	"clinicapp/pkg/config"
+	"clinicapp/pkg/deleting"
+	"clinicapp/pkg/editing"
 	"clinicapp/pkg/handler"
 	"clinicapp/pkg/listing"
 	"clinicapp/pkg/storage/postgres"
@@ -21,5 +24,8 @@ func main() {
 	s, _ := postgres.NewStorage()
 	lister := listing.NewService(s)
 	booker := booking.NewService(s)
-	handler.Handler(lister, booker)
+	canceler := canceling.NewService(s)
+	deleter := deleting.NewService(s)
+	editer := editing.NewService(s)
+	handler.Handler(lister, booker, canceler, deleter, editer)
 }

@@ -31,17 +31,18 @@ func GetDoctor(ls listing.Service) gin.HandlerFunc {
 			ctx.Error(errors.New("Get Doctor - " + listing.ErrIdNotFound.Error()))
 		}
 		ctx.JSON(http.StatusOK, gin.H{
-			"data": doctor,
+			"response": doctor,
 		})
 	}
 
 }
 
+// a handler for GET /doctors requests
 func GetAllDoctors(ls listing.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		doctors := ls.GetAllDoctors()
 		ctx.JSON(http.StatusOK, gin.H{
-			"data": doctors,
+			"response": doctors,
 		})
 	}
 }

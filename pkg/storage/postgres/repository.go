@@ -105,10 +105,25 @@ func (s *Storage) GetAllDoctors() []Doctor {
 
 }
 
-func (s *Storage) GetAppointments() []Appointment {
-	var appointments []Appointment
+func (s *Storage) DoctorExists(id int) bool {
 
-	return appointments
+	var doctorID int
+
+	row, _ := s.DB.Query(`SELECT id FROM doctors
+							WHERE doctors.id = $1`, id)
+
+	if err := scan.RowStrict(&doctorID, row); err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("INFO: doctorExists - doctor id does not exist")
+			return false
+		}
+
+		fmt.Println("ERROR: doctorExists -", err)
+		return false
+	}
+
+	fmt.Println("INFO: doctorExists - doctor id exists")
+	return true
 }
 
 func (s *Storage) CreateAppointment(a AppointmentCreate) error {
@@ -129,25 +144,42 @@ func (s *Storage) CreateAppointment(a AppointmentCreate) error {
 	return nil
 }
 
-func (s *Storage) DoctorExists(id int) bool {
+func (s *Storage) GetAppointments() []Appointment {
+	var appointments []Appointment
 
-	var doctorID int
+	return appointments
+}
 
-	row, _ := s.DB.Query(`SELECT id FROM doctors
-							WHERE doctors.id = $1`, id)
+func (s *Storage) GetAppointment(id int) Appointment {
+	var appointment Appointment
 
-	if err := scan.RowStrict(&doctorID, row); err != nil {
-		if err == sql.ErrNoRows {
-			fmt.Println("INFO: doctorExists - doctor id does not exist")
-			return false
-		}
+	row := s.DB.QueryRow(`
+		SELECT *
+		FROM appointments 
+		WHERE id = $1
+		`, id)
 
-		fmt.Println("ERROR: doctorExists -", err)
-		return false
+	if err := row.Scan(&appointment); err != nil {
+		fmt.Println("GetAppointment - ", err)
+		return appointment
 	}
 
-	fmt.Println("INFO: doctorExists - doctor id exists")
-	return true
+	return appointment
+}
+
+func (s *Storage) EditAppointment(id int, appointment AppointmentEdit) error {
+	rows, err := s.DB.Query(`
+		UPDATE appointments 
+		SET start_datetime = $1, end_datetime = $2, is_canceled = $3
+		WHERE id = $4`, appointment.StartDatetime, appointment.EndDatetime, appointment.IsCanceled, id)
+
+	if err != nil {
+		return errors.New("EditAppointment - Was not able to execute query - " + err.Error())
+	}
+
+	defer rows.Close()
+
+	return nil
 }
 
 // get the number of appointments a doctor has with unique patients in a given date
@@ -206,42 +238,69 @@ func (s *Storage) GetAllAppointmentsOfDoctor(doctor_id int, date time.Time) []Ap
 
 }
 
-// // get doctor with given id
-// func (s *Storage) GetDoctor(id string) (listing.Doctor, error) {
-// 	// if row := s.DB.QueryRow(`
-// 	// SELECT first_name, last_name, email, work_shift, specialization, doctors.id from users, staffs, doctors
-// 	// WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id); row != nil {
-// 	// 	if err := row.Scan(&doctor.FirstName, &doctor.LastName, &doctor.Email,
-// 	// 		&doctor.WorkShift, &doctor.Specialization, &doctor.ID); err != nil {
-// 	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
-// 	// 	}
-// 	// 	if row.Err() == sql.ErrNoRows {
-// 	// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
-// 	// 	}
-// 	// 	return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", row))
-// 	// }
+func (s *Storage) GetAppointmentHoursPerDay(doctor_id int, date time.Time) int {
+	var hours int = 0
 
-// 	// row := s.DB.QueryRow(`
-// 	// SELECT * FROM users, staffs, doctors
-// 	// WHERE users.id = $1 AND staffs.id = $1 AND doctors.id = $1`, id)
+	row := s.DB.QueryRow(`
+		SELECT extract(hour FROM total_appointments_duration) FROM 
+		(SELECT SUM(duration) AS total_appointments_duration FROM 
+			(SELECT end_datetime - start_datetime AS duration
+			FROM appointments 
+			WHERE doctor_id = $1 AND CAST(start_datetime AS DATE) = $2
+			) appointment_duration
+		) total_duration_hours;
+		`, doctor_id, date)
 
-// 	// scanning := structscanner.Select(s.DB, &d, "",
-// 	// 	`SELECT * FROM users, staffs, doctors
-// 	// 	WHERE users.id = 1 AND staffs.id = 1 AND doctors.id = 1`)
+	if err := row.Scan(&hours); err != nil {
+		fmt.Println("GetNumberOfAppointmentsWithDistinctPatient - ", err)
+		return hours
+	}
 
-// 	var doctor listing.Doctor
+	return hours
 
-// 	row, _ := s.DB.Query(`SELECT * FROM users, staffs, doctors
-// 							WHERE users.id = $1 AND
-// 							staffs.id = $1 AND doctors.id = $1`, id)
+	// 	--with appointment(start_datetime, end_datetime)
+	// --as (select start_datetime, end_datetime
+	// --	from appointments
+	// --	where doctor_id = 2 and cast(start_datetime as date) = '2022-08-09'),
+	// --	hours_sum as (select sum(a.end_datetime-a.start_datetime) from appointment a)
+	// --select hours_sum from hours_sum;
 
-// 	if err := scan.RowStrict(&doctor, row); err != nil {
-// 		if err == sql.ErrNoRows {
-// 			return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", listing.ErrIdNotFound))
-// 		}
-// 		return doctor, errors.New(fmt.Sprintln("ERROR: GetDoctor - ", err))
+	// --with appointment(start_datetime, end_datetime)
+	// --as (select start_datetime, end_datetime
+	// --	from appointments
+	// --	where doctor_id = 2 and cast(start_datetime as date) = '2022-08-09'),
+	// --	hours as (select extract('epoch' from a.end_datetime-a.start_datetime)/3600.00 from appointment a)
+	// --select hours from hours;
 
-// 	}
+}
 
-// 	return doctor, nil
-// }
+func (s *Storage) CancelAppointment(id int) error {
+	var canceled bool = true
+
+	rows, err := s.DB.Query(`
+		UPDATE appointments 
+		SET is_canceled = $1
+		WHERE id = $2`, canceled, id)
+
+	if err != nil {
+		return errors.New("CancelAppointment - Was not able to execute query - " + err.Error())
+	}
+
+	defer rows.Close()
+
+	return nil
+}
+
+func (s *Storage) DeleteAppointment(id int) error {
+	rows, err := s.DB.Query(`
+		DELETE FROM appointments
+		WHERE id = $1`, id)
+
+	if err != nil {
+		return errors.New("DeleteAppointment - Was not able to execute query - " + err.Error())
+	}
+
+	defer rows.Close()
+
+	return nil
+}

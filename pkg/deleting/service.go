@@ -1,21 +1,20 @@
-package canceling
+package deleting
 
 import (
 	"errors"
 )
 
-var ErrIdNotFound = errors.New("doctor with given id not found")
-var ErrEmpty = errors.New("no doctor was found")
+var ErrAppointment = errors.New("failed to delete appointment")
 
 // provide access to the appointment storage
 type Repository interface {
-	// modify the storage to set the appointment field is_canceled = True
-	CancelAppointment(int) error
+	// delete the specified appointment from storage
+	DeleteAppointment(int) error
 }
 
 // provide listing operations for appointment
 type Service interface {
-	CancelAppointment(int) error
+	DeleteAppointment(int) error
 }
 
 type service struct {
@@ -28,8 +27,8 @@ func NewService(repo Repository) Service {
 }
 
 // implement service methods
-func (s *service) CancelAppointment(id int) error {
-	err := s.repo.CancelAppointment(id)
+func (s *service) DeleteAppointment(id int) error {
+	err := s.repo.DeleteAppointment(id)
 
 	return err
 }
