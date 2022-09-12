@@ -128,10 +128,16 @@ func (s *service) CreateAppointment(a Appointment) error {
 	doctorStartBreakTime := doctorBreakTime[0]
 	doctorEndBreakTime := doctorBreakTime[1]
 
-	appointmentIsWithinDoctorBreakTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorStartBreakTime, doctorEndBreakTime)
+	appointmentIsWithinDurationBeforeDoctorBreakTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorStartBreakTime, a.StartDatetime)
 
-	if appointmentIsWithinDoctorBreakTime {
-		return errors.New("ERROR: CreateAppointment - appointment cannot be within the break timing of the doctor")
+	if !appointmentIsWithinDurationBeforeDoctorBreakTime {
+		return errors.New("ERROR: CreateAppointment - appointment cannot end during the break timing of the doctor")
+	}
+
+	appointmentIsWithinDurationAfterBreakTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorEndBreakTime, a.EndDatetime)
+
+	if !appointmentIsWithinDurationAfterBreakTime {
+		return errors.New("ERROR: CreateAppointment - appointment cannot start within the break timing of the doctor")
 	}
 
 	// appointment should not conflict with other previously set appointments
