@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"clinicapp/pkg/storage/postgres/utils"
 	"errors"
 	"fmt"
 	"log"
@@ -183,14 +184,14 @@ func (s *Storage) EditAppointment(id int, appointment AppointmentEdit) error {
 }
 
 // get the number of appointments a doctor has with unique patients in a given date
-func (s *Storage) GetNumberOfAppointmentsWithDistinctPatient(doctor_id int, date time.Time) int {
+func (s *Storage) GetNumberOfAppointmentsWithDistinctPatient(doctorID int, date time.Time) int {
 	var appointments_count int = 0
 
 	row := s.DB.QueryRow(`
-		SELECT COUNT(DISTINCT(patient_id, doctor_id))
+		SELECT COUNT(DISTINCT(patient_id, $1))
 		FROM appointments a
-		WHERE CAST(a.start_datetime as DATE) = CAST($1 as DATE)
-		`, date)
+		WHERE CAST(a.start_datetime as DATE) = CAST($2 as DATE)
+		`, doctorID, date)
 
 	if err := row.Scan(&appointments_count); err != nil {
 		fmt.Println("GetNumberOfAppointmentsWithDistinctPatient - ", err)
@@ -201,13 +202,13 @@ func (s *Storage) GetNumberOfAppointmentsWithDistinctPatient(doctor_id int, date
 
 }
 
-func (s *Storage) GetAllAppointmentsOfDoctor(doctor_id int, date time.Time) []Appointment {
-	var appointments []Appointment
+func (s *Storage) GetAllAppointmentsOfDoctor(doctorID int, date time.Time) []Appointment {
+	var appointments []Appointment = []Appointment{}
 
 	rows, err := s.DB.Query(`
 		SELECT * 
 		FROM appointments a
-		WHERE a.doctors_id = $1	AND CAST(a.start_datetime as DATE) = CAST($2 as DATE)`, doctor_id, date)
+		WHERE a.doctors_id = $1	AND CAST(a.start_datetime as DATE) = CAST($2 as DATE)`, doctorID, date)
 
 	if err != nil {
 		fmt.Println("GetAllAppointment - Was not able to execute query", err.Error())
@@ -238,7 +239,7 @@ func (s *Storage) GetAllAppointmentsOfDoctor(doctor_id int, date time.Time) []Ap
 
 }
 
-func (s *Storage) GetAppointmentHoursPerDay(doctor_id int, date time.Time) int {
+func (s *Storage) GetAppointmentHoursPerDay(doctorID int, date time.Time) int {
 	var hours int = 0
 
 	row := s.DB.QueryRow(`
@@ -249,7 +250,7 @@ func (s *Storage) GetAppointmentHoursPerDay(doctor_id int, date time.Time) int {
 			WHERE doctor_id = $1 AND CAST(start_datetime AS DATE) = $2
 			) appointment_duration
 		) total_duration_hours;
-		`, doctor_id, date)
+		`, doctorID, date)
 
 	if err := row.Scan(&hours); err != nil {
 		fmt.Println("GetNumberOfAppointmentsWithDistinctPatient - ", err)
@@ -272,6 +273,57 @@ func (s *Storage) GetAppointmentHoursPerDay(doctor_id int, date time.Time) int {
 	// --	hours as (select extract('epoch' from a.end_datetime-a.start_datetime)/3600.00 from appointment a)
 	// --select hours from hours;
 
+}
+
+func (s *Storage) IsAppointmentWithinDoctorWorkDays(doctorID int, day time.Weekday) bool {
+	var _doctorID int
+
+	row := s.DB.QueryRow(`
+		SELECT id
+		FROM staffs
+		WHERE id=$1 and $2 = any (work_days);
+		`, doctorID, day)
+
+	if err := row.Scan(&_doctorID); err != nil {
+		fmt.Println("IsAppointmentWithinDoctorWorkDays - ", err)
+		return false
+	}
+
+	return true
+}
+
+func (s *Storage) GetDoctorWorkTime(doctorID int) []time.Time {
+	var _workTime utils.TimeArray = []time.Time{}
+
+	row := s.DB.QueryRow(`
+		SELECT work_time
+		FROM staffs
+		WHERE id=$1;
+		`, doctorID)
+
+	if err := row.Scan(&_workTime); err != nil {
+		fmt.Println("IsAppointmentWithinDoctorWorkDays - ", err)
+		return _workTime
+	}
+
+	return _workTime
+}
+
+func (s *Storage) GetDoctorBreakTime(doctorID int) []time.Time {
+	var _breakTime utils.TimeArray = []time.Time{}
+
+	row := s.DB.QueryRow(`
+		SELECT break_time
+		FROM staffs
+		WHERE id=$1;
+		`, doctorID)
+
+	if err := row.Scan(&_breakTime); err != nil {
+		fmt.Println("IsAppointmentWithinDoctorWorkDays - ", err)
+		return _breakTime
+	}
+
+	return _breakTime
 }
 
 func (s *Storage) CancelAppointment(id int) error {

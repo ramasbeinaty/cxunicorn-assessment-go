@@ -72,7 +72,7 @@ func createTables(db *sql.DB) {
 	createStaffsTable := `
 		CREATE TABLE staffs (
 			id serial NOT NULL UNIQUE,
-			work_days TEXT[] NOT NULL,
+			work_days INTEGER[7] NOT NULL,
 			work_time TIME WITH TIME ZONE[] NOT NULL,
 			break_time TIME WITH TIME ZONE[] NOT NULL,
 			CONSTRAINT FK_id FOREIGN KEY (id) REFERENCES users(id)
@@ -234,25 +234,25 @@ func populateTables(db *sql.DB) {
 		break_time
 	) VALUES (
 		1,
-		'{Mon, Tues, Wed}',
+		'{0, 1, 2}',
 		'{8:00:00Z, 18:00:00Z}',
 		'{13:00:00Z, 14:00:00Z}'
 	),
 	(
 		2,
-		'{Sat, Tues, Wed}',
+		'{3, 4, 5}',
 		'{8:00:00Z, 18:00:00Z}',
 		'{13:00:00Z, 14:00:00Z}'
 	),
 	(
 		3,
-		'{Fri, Sat, Sun}',
+		'{1, 2, 3}',
 		'{8:00:00Z, 18:00:00Z}',
 		'{13:00:00Z, 14:00:00Z}'
 	),
 	(
 		6,
-		'{Fri, Sat, Sun}',
+		'{2, 3, 4}',
 		'{8:00:00Z, 18:00:00Z}',
 		'{13:00:00Z, 14:00:00Z}'
 	)

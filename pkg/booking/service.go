@@ -3,6 +3,7 @@ package booking
 import (
 	"clinicapp/pkg/storage/postgres"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -21,6 +22,15 @@ type Repository interface {
 
 	// to validate doctors have less than 8 hours of appointments per day
 	GetAppointmentHoursPerDay(int, time.Time) int
+
+	// to validate appointment is within doctor's work days
+	IsAppointmentWithinDoctorWorkDays(int, time.Weekday) bool
+
+	// to validate appointment is within doctor's work hours
+	GetDoctorWorkTime(int) []time.Time
+
+	// to validate appointment is not within doctor's break time
+	GetDoctorBreakTime(int) []time.Time
 }
 
 // provide booking operations for struct appointment
@@ -59,36 +69,72 @@ func (s *service) CreateAppointment(a Appointment) error {
 	}
 
 	// calculate the start and end date time difference
-	datetime_difference := a.EndDatetime.Sub(a.StartDatetime)
+	datetimeDifference := a.EndDatetime.Sub(a.StartDatetime)
 
 	// validate the appointment is at least 15 minutes
-	if datetime_difference.Minutes() < 15 {
+	if datetimeDifference.Minutes() < 15 {
 		return errors.New("ERROR: CreateAppointment - appointment duration cannot less than 15 minutes")
 	}
 
 	// validate the appointment is at most 2 hours
-	if datetime_difference.Hours() > 2 {
+	if datetimeDifference.Hours() > 2 {
 		return errors.New("ERROR: CreateAppointment - appointment duration cannot greater than 2 hours")
 	}
 
 	// validate doctor does not have more than 12 different patients per day
-	number_of_appointments := s.repo.GetNumberOfAppointmentsWithDistinctPatient(a.DoctorID, a.StartDatetime)
-	if number_of_appointments > 12 {
+	numberOfAppointments := s.repo.GetNumberOfAppointmentsWithDistinctPatient(a.DoctorID, a.StartDatetime)
+	if numberOfAppointments > 12 {
 		return errors.New("ERROR: CreateAppointment - doctor cannot have more than 12 different patients in a day")
 	}
 
 	// validate doctor does not have more than 8 hours per day
-	appointment_hours := s.repo.GetAppointmentHoursPerDay(a.DoctorID, a.StartDatetime)
-	if appointment_hours > 8 {
+	appointmentHours := s.repo.GetAppointmentHoursPerDay(a.DoctorID, a.StartDatetime)
+	if appointmentHours > 8 {
 		return errors.New("ERROR: CreateAppointment - doctor cannot have more than 8 hours in a day")
 	}
 
+	// appointment must be within the work days of the doctor
+	isWithinDoctorsWorkDays := s.repo.IsAppointmentWithinDoctorWorkDays(a.DoctorID, a.StartDatetime.Weekday())
+
+	if !isWithinDoctorsWorkDays {
+		return errors.New("ERROR: CreateAppointment - appointment is not within the work days of the doctor")
+	}
+
 	// appointment must be within the work time of the doctor
-	
 
-	// appointment can not be during doctor's break time
+	//
+	// appointmentStartTime := time.Date(a.StartDatetime.Year(), a.StartDatetime.Month(), a.StartDatetime.Day(),
+	// a.StartDatetime.Hour(), a.StartDatetime.Minute(), a.StartDatetime.Second(), a.StartDatetime.Nanosecond(),
+	// a.StartDatetime.Location())
 
-	// appointment should not conflict with others
+	// appointmentEndTime := time.Date(a.EndDatetime.Year(), a.EndDatetime.Month(), a.EndDatetime.Day(),
+	// a.EndDatetime.Hour(), a.EndDatetime.Minute(), a.EndDatetime.Second(), a.EndDatetime.Nanosecond(),
+	// a.EndDatetime.Location())
+
+	doctorWorkTime := s.repo.GetDoctorWorkTime(a.DoctorID)
+
+	doctorStartWorkTime := doctorWorkTime[0]
+	doctorEndWorkTime := doctorWorkTime[1]
+
+	appointmentIsWithinDoctorWorkTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorStartWorkTime, doctorEndWorkTime)
+
+	if !appointmentIsWithinDoctorWorkTime {
+		return errors.New("ERROR: CreateAppointment - appointment is not within the work timings of the doctor")
+	}
+
+	// validate that appointment is not within doctor's break time
+	doctorBreakTime := s.repo.GetDoctorBreakTime(a.DoctorID)
+
+	doctorStartBreakTime := doctorBreakTime[0]
+	doctorEndBreakTime := doctorBreakTime[1]
+
+	appointmentIsWithinDoctorBreakTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorStartBreakTime, doctorEndBreakTime)
+
+	if appointmentIsWithinDoctorBreakTime {
+		return errors.New("ERROR: CreateAppointment - appointment cannot be within the break timing of the doctor")
+	}
+
+	// appointment should not conflict with other previously set appointments
 
 	// if validations come through, add the appointment to storage
 	var appointments postgres.AppointmentCreate
@@ -99,4 +145,26 @@ func (s *service) CreateAppointment(a Appointment) error {
 	appointments.EndDatetime = a.EndDatetime
 
 	return s.repo.CreateAppointment(appointments)
+}
+
+func eventIsWithinTimeBounds(event_start_time time.Time, event_end_time time.Time, start_time_bound time.Time, end_time_bound time.Time) bool {
+	// specified event cannot start before the time bound
+	if event_start_time.Before(start_time_bound) {
+		fmt.Println("ERROR: eventIsWithinTimeBounds - event cannot start before time bound")
+		return false
+	}
+
+	// specified event cannot start after the time bound
+	if event_start_time.After(end_time_bound) {
+		fmt.Println("ERROR: eventIsWithinTimeBounds - event cannot overlap or occur after time bound")
+		return false
+	}
+
+	// specified event cannot end after the time bound
+	if event_end_time.After(end_time_bound) {
+		fmt.Println("ERROR: eventIsWithinTimeBounds - event cannot end after time bound")
+		return false
+	}
+
+	return true
 }
