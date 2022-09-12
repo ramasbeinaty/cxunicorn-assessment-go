@@ -292,6 +292,25 @@ func (s *Storage) IsAppointmentWithinDoctorWorkDays(doctorID int, day time.Weekd
 	return true
 }
 
+func (s *Storage) IsAppointmentOverlapping(doctorID int, patientID int, startDateTime time.Time, endDatetime time.Time) bool {
+	var isOverlapping bool = false
+
+	row := s.DB.QueryRow(`
+		SELECT CAST(CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END AS BIT)
+		FROM (SELECT start_datetime, end_datetime
+		FROM appointments
+		WHERE doctor_id=$1 or patient_id=$2) app 
+		WHERE (app.start_datetime, app.end_datetime) OVERLAPS ($3, $4);
+	`, doctorID, patientID, startDateTime, endDatetime)
+
+	if err := row.Scan(&isOverlapping); err != nil {
+		fmt.Println("IsAppointmentOverlapping - ", err)
+		return false
+	}
+
+	return isOverlapping
+}
+
 func (s *Storage) GetDoctorWorkTime(doctorID int) []time.Time {
 	var _workTime utils.TimeArray = []time.Time{}
 

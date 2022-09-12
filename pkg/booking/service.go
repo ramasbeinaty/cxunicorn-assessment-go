@@ -31,6 +31,9 @@ type Repository interface {
 
 	// to validate appointment is not within doctor's break time
 	GetDoctorBreakTime(int) []time.Time
+
+	// to validate appointment does not overlap previously booked appointments of neither the doctor's nor the patient's
+	IsAppointmentOverlapping(int, int, time.Time, time.Time) bool
 }
 
 // provide booking operations for struct appointment
@@ -93,30 +96,32 @@ func (s *service) CreateAppointment(a Appointment) error {
 		return errors.New("ERROR: CreateAppointment - doctor cannot have more than 8 hours in a day")
 	}
 
-	// appointment must be within the work days of the doctor
+	// validate appointment is within the work days of the doctor
 	isWithinDoctorsWorkDays := s.repo.IsAppointmentWithinDoctorWorkDays(a.DoctorID, a.StartDatetime.Weekday())
 
 	if !isWithinDoctorsWorkDays {
 		return errors.New("ERROR: CreateAppointment - appointment is not within the work days of the doctor")
 	}
 
-	// appointment must be within the work time of the doctor
-
-	//
-	// appointmentStartTime := time.Date(a.StartDatetime.Year(), a.StartDatetime.Month(), a.StartDatetime.Day(),
-	// a.StartDatetime.Hour(), a.StartDatetime.Minute(), a.StartDatetime.Second(), a.StartDatetime.Nanosecond(),
-	// a.StartDatetime.Location())
-
-	// appointmentEndTime := time.Date(a.EndDatetime.Year(), a.EndDatetime.Month(), a.EndDatetime.Day(),
-	// a.EndDatetime.Hour(), a.EndDatetime.Minute(), a.EndDatetime.Second(), a.EndDatetime.Nanosecond(),
-	// a.EndDatetime.Location())
+	// validate appointment is within the work time of the doctor
 
 	doctorWorkTime := s.repo.GetDoctorWorkTime(a.DoctorID)
 
 	doctorStartWorkTime := doctorWorkTime[0]
 	doctorEndWorkTime := doctorWorkTime[1]
 
-	appointmentIsWithinDoctorWorkTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorStartWorkTime, doctorEndWorkTime)
+	// declare and initialize appointment time only so dates are not taken into consideration when comparing timestamps
+	appointmentStartTime := time.Date(doctorEndWorkTime.Year(), doctorEndWorkTime.Month(), doctorEndWorkTime.Day(),
+		a.StartDatetime.Hour(), a.StartDatetime.Minute(), a.StartDatetime.Second(), a.StartDatetime.Nanosecond(),
+		a.StartDatetime.Location())
+
+	appointmentEndTime := time.Date(doctorEndWorkTime.Year(), doctorEndWorkTime.Month(), doctorEndWorkTime.Day(),
+		a.EndDatetime.Hour(), a.EndDatetime.Minute(), a.EndDatetime.Second(), a.EndDatetime.Nanosecond(),
+		a.EndDatetime.Location())
+
+	appointmentIsWithinDoctorWorkTime := appointmentIsWithinWorkTime(appointmentStartTime, appointmentEndTime, doctorStartWorkTime, doctorEndWorkTime)
+
+	appointmentIsWithinBreakTime(appointmentStartTime, appointmentEndTime, doctorStartWorkTime, doctorEndWorkTime)
 
 	if !appointmentIsWithinDoctorWorkTime {
 		return errors.New("ERROR: CreateAppointment - appointment is not within the work timings of the doctor")
@@ -128,19 +133,18 @@ func (s *service) CreateAppointment(a Appointment) error {
 	doctorStartBreakTime := doctorBreakTime[0]
 	doctorEndBreakTime := doctorBreakTime[1]
 
-	appointmentIsWithinDurationBeforeDoctorBreakTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorStartBreakTime, a.StartDatetime)
+	appointmentIsWithinBreakTime := appointmentIsWithinBreakTime(appointmentStartTime, appointmentEndTime, doctorStartBreakTime, doctorEndBreakTime)
 
-	if !appointmentIsWithinDurationBeforeDoctorBreakTime {
-		return errors.New("ERROR: CreateAppointment - appointment cannot end during the break timing of the doctor")
+	if appointmentIsWithinBreakTime {
+		return errors.New("ERROR: CreateAppointment - appointment cannot occur within the break time of doctor")
 	}
 
-	appointmentIsWithinDurationAfterBreakTime := eventIsWithinTimeBounds(a.StartDatetime, a.EndDatetime, doctorEndBreakTime, a.EndDatetime)
+	// validate appointment doesn't overlap with previously booked appointments of both the doctor's and the patient's
+	isOverlapping := s.repo.IsAppointmentOverlapping(a.DoctorID, a.PatientID, a.StartDatetime, a.EndDatetime)
 
-	if !appointmentIsWithinDurationAfterBreakTime {
-		return errors.New("ERROR: CreateAppointment - appointment cannot start within the break timing of the doctor")
+	if isOverlapping {
+		return errors.New("ERROR: CreateAppointment - appointment overlaps a previously booked appointment")
 	}
-
-	// appointment should not conflict with other previously set appointments
 
 	// if validations come through, add the appointment to storage
 	var appointments postgres.AppointmentCreate
@@ -153,22 +157,33 @@ func (s *service) CreateAppointment(a Appointment) error {
 	return s.repo.CreateAppointment(appointments)
 }
 
-func eventIsWithinTimeBounds(event_start_time time.Time, event_end_time time.Time, start_time_bound time.Time, end_time_bound time.Time) bool {
-	// specified event cannot start before the time bound
-	if event_start_time.Before(start_time_bound) {
-		fmt.Println("ERROR: eventIsWithinTimeBounds - event cannot start before time bound")
+func appointmentIsWithinWorkTime(appointmentStartTime time.Time, appointmentEndTime time.Time, workStartTime time.Time, workEndTime time.Time) bool {
+	if appointmentStartTime.Before(workStartTime) {
+		fmt.Println("INFO: appointmentIsWithinWorkTime - appointment starts before doctor's work time")
 		return false
 	}
 
-	// specified event cannot start after the time bound
-	if event_start_time.After(end_time_bound) {
-		fmt.Println("ERROR: eventIsWithinTimeBounds - event cannot overlap or occur after time bound")
+	if appointmentStartTime.After(workEndTime) {
+		fmt.Println("INFO: appointmentIsWithinWorkTime - appointment overlaps or occurs after doctor's work time")
 		return false
 	}
 
-	// specified event cannot end after the time bound
-	if event_end_time.After(end_time_bound) {
-		fmt.Println("ERROR: eventIsWithinTimeBounds - event cannot end after time bound")
+	if appointmentEndTime.After(workEndTime) {
+		fmt.Println("INFO: appointmentIsWithinWorkTime - appointment ends after doctor's work time")
+		return false
+	}
+
+	return true
+}
+
+func appointmentIsWithinBreakTime(appointmentStartTime time.Time, appointmentEndTime time.Time, breakStartTime time.Time, breakEndTime time.Time) bool {
+	if appointmentStartTime.After(breakEndTime) {
+		fmt.Println("INFO: appointmentIsWithinBreakTime - appointment starts after the break ends")
+		return false
+	}
+
+	if appointmentStartTime.Before(breakStartTime) && appointmentEndTime.Before(breakStartTime) {
+		fmt.Println("INFO: appointmentIsWithinBreakTime - appointment starts and ends before the break starts")
 		return false
 	}
 
