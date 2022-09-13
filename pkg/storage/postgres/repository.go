@@ -188,9 +188,10 @@ func (s *Storage) GetNumberOfAppointmentsWithDistinctPatient(doctorID int, date 
 	var appointments_count int = 0
 
 	row := s.DB.QueryRow(`
-		SELECT COUNT(DISTINCT(patient_id, $1))
+		SELECT COUNT(DISTINCT(patient_id, doctor_id))
 		FROM appointments a
-		WHERE CAST(a.start_datetime as DATE) = CAST($2 as DATE)
+		WHERE doctor_id = $1 
+		AND CAST(a.start_datetime::timestamp as DATE) = CAST($2::timestamp as DATE)
 		`, doctorID, date)
 
 	if err := row.Scan(&appointments_count); err != nil {
@@ -292,7 +293,46 @@ func (s *Storage) IsAppointmentWithinDoctorWorkDays(doctorID int, day time.Weekd
 	return true
 }
 
-func (s *Storage) IsAppointmentOverlapping(doctorID int, patientID int, startDateTime time.Time, endDatetime time.Time) bool {
+func (s *Storage) IsAppointmentWithinDoctorWorkTime(doctorID int, startDatetime time.Time, endDatetime time.Time) bool {
+	var _id int
+
+	row := s.DB.QueryRow(`
+		SELECT id
+		FROM staffs
+		WHERE id=$1
+		AND (work_time[1], work_time[2]) 
+		OVERLAPS (cast($2::timestamp at time zone 'utc' as time), cast($3::timestamp at time zone 'utc' as time));
+	`, doctorID, startDatetime, endDatetime)
+
+	if err := row.Scan(&_id); err != nil {
+		fmt.Println("IsAppointmentWithinDoctorWorkTime - ", err)
+		return false
+	}
+
+	return true
+}
+
+func (s *Storage) IsAppointmentWithinDoctorBreakTime(doctorID int, startDatetime time.Time, endDatetime time.Time) bool {
+	var _id int
+
+	row := s.DB.QueryRow(`
+		SELECT id
+		FROM staffs
+		WHERE id=$1
+		AND (break_time[1], break_time[2]) 
+		OVERLAPS (cast($2::timestamp at time zone 'utc' as time), cast($3::timestamp at time zone 'utc' as time));
+	`, doctorID, startDatetime, endDatetime)
+
+	if err := row.Scan(&_id); err != nil {
+		fmt.Println("IsAppointmentWithinDoctorWorkTime - ", err)
+		return false
+	}
+
+	return true
+}
+
+
+func (s *Storage) IsAppointmentOverlapping(doctorID int, patientID int, startDatetime time.Time, endDatetime time.Time) bool {
 	var isOverlapping bool = false
 
 	row := s.DB.QueryRow(`
@@ -301,7 +341,7 @@ func (s *Storage) IsAppointmentOverlapping(doctorID int, patientID int, startDat
 		FROM appointments
 		WHERE doctor_id=$1 or patient_id=$2) app 
 		WHERE (app.start_datetime, app.end_datetime) OVERLAPS ($3, $4);
-	`, doctorID, patientID, startDateTime, endDatetime)
+	`, doctorID, patientID, startDatetime, endDatetime)
 
 	if err := row.Scan(&isOverlapping); err != nil {
 		fmt.Println("IsAppointmentOverlapping - ", err)

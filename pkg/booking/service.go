@@ -26,11 +26,17 @@ type Repository interface {
 	// to validate appointment is within doctor's work days
 	IsAppointmentWithinDoctorWorkDays(int, time.Weekday) bool
 
-	// to validate appointment is within doctor's work hours
-	GetDoctorWorkTime(int) []time.Time
+	// to validate appointment overlaps doctor's work timings
+	IsAppointmentWithinDoctorWorkTime(int, time.Time, time.Time) bool
 
-	// to validate appointment is not within doctor's break time
-	GetDoctorBreakTime(int) []time.Time
+	// to validate appointment overlaps doctor's break time
+	IsAppointmentWithinDoctorBreakTime(int, time.Time, time.Time) bool
+
+	// // to validate appointment is within doctor's work hours
+	// GetDoctorWorkTime(int) []time.Time
+
+	// // to validate appointment is not within doctor's break time
+	// GetDoctorBreakTime(int) []time.Time
 
 	// to validate appointment does not overlap previously booked appointments of neither the doctor's nor the patient's
 	IsAppointmentOverlapping(int, int, time.Time, time.Time) bool
@@ -103,37 +109,14 @@ func (s *service) CreateAppointment(a Appointment) error {
 		return errors.New("ERROR: CreateAppointment - appointment is not within the work days of the doctor")
 	}
 
-	// validate appointment is within the work time of the doctor
-
-	doctorWorkTime := s.repo.GetDoctorWorkTime(a.DoctorID)
-
-	doctorStartWorkTime := doctorWorkTime[0]
-	doctorEndWorkTime := doctorWorkTime[1]
-
-	// declare and initialize appointment time only so dates are not taken into consideration when comparing timestamps
-	appointmentStartTime := time.Date(doctorEndWorkTime.Year(), doctorEndWorkTime.Month(), doctorEndWorkTime.Day(),
-		a.StartDatetime.Hour(), a.StartDatetime.Minute(), a.StartDatetime.Second(), a.StartDatetime.Nanosecond(),
-		a.StartDatetime.Location())
-
-	appointmentEndTime := time.Date(doctorEndWorkTime.Year(), doctorEndWorkTime.Month(), doctorEndWorkTime.Day(),
-		a.EndDatetime.Hour(), a.EndDatetime.Minute(), a.EndDatetime.Second(), a.EndDatetime.Nanosecond(),
-		a.EndDatetime.Location())
-
-	appointmentIsWithinDoctorWorkTime := appointmentIsWithinWorkTime(appointmentStartTime, appointmentEndTime, doctorStartWorkTime, doctorEndWorkTime)
-
-	appointmentIsWithinBreakTime(appointmentStartTime, appointmentEndTime, doctorStartWorkTime, doctorEndWorkTime)
+	// // validate appointment is within the work time of the doctor
+	appointmentIsWithinDoctorWorkTime := s.repo.IsAppointmentWithinDoctorWorkTime(a.DoctorID, a.StartDatetime, a.EndDatetime)
 
 	if !appointmentIsWithinDoctorWorkTime {
 		return errors.New("ERROR: CreateAppointment - appointment is not within the work timings of the doctor")
 	}
 
-	// validate that appointment is not within doctor's break time
-	doctorBreakTime := s.repo.GetDoctorBreakTime(a.DoctorID)
-
-	doctorStartBreakTime := doctorBreakTime[0]
-	doctorEndBreakTime := doctorBreakTime[1]
-
-	appointmentIsWithinBreakTime := appointmentIsWithinBreakTime(appointmentStartTime, appointmentEndTime, doctorStartBreakTime, doctorEndBreakTime)
+	appointmentIsWithinBreakTime := s.repo.IsAppointmentWithinDoctorBreakTime(a.DoctorID, a.StartDatetime, a.EndDatetime)
 
 	if appointmentIsWithinBreakTime {
 		return errors.New("ERROR: CreateAppointment - appointment cannot occur within the break time of doctor")
