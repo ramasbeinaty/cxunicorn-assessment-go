@@ -53,6 +53,90 @@ func NewStorage() (*Storage, error) {
 	return s, nil
 }
 
+func (s *Storage) CreateUser(user UserCreate) (int, error) {
+
+	var user_id int
+
+	row, err := s.DB.Query(`
+		INSERT INTO users (first_name, last_name, dob, phone_number,
+		email, password, role)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id`,
+		user.FirstName, user.LastName, user.DOB, user.PhoneNumber, user.Email,
+		user.Password, user.Role,
+	)
+
+	if err = scan.RowStrict(&user_id, row); err != nil {
+		return user_id, errors.New("ERROR: CreateUser - " + err.Error())
+	}
+
+	return user_id, nil
+}
+
+func (s *Storage) CreatePatient(patient PatientCreate) error {
+	rows, err := s.DB.Query(`
+		INSERT INTO patients(id, medical_history) 
+		VALUES ($1, $2)`,
+		patient.ID, patient.MedicalHistory,
+	)
+
+	if err != nil {
+		return errors.New("ERROR: CreatePatient - " + err.Error())
+	}
+
+	defer rows.Close()
+
+	return nil
+}
+
+func (s *Storage) CreateDoctor(doctor DoctorCreate) error {
+	rows, err := s.DB.Query(`
+		INSERT INTO doctors(id, specialization) 
+		VALUES ($1, $2)`,
+		doctor.ID, doctor.Specialization,
+	)
+
+	if err != nil {
+		return errors.New("ERROR: CreateDoctor - " + err.Error())
+	}
+
+	defer rows.Close()
+
+	return nil
+}
+
+func (s *Storage) CreateClinicAdmin(clinicAdmin ClinicAdminCreate) error {
+	rows, err := s.DB.Query(`
+		INSERT INTO clinic_admins(id) 
+		VALUES ($1)`,
+		clinicAdmin.ID,
+	)
+
+	if err != nil {
+		return errors.New("ERROR: CreateClinicAdmin - " + err.Error())
+	}
+
+	defer rows.Close()
+
+	return nil
+}
+
+func (s *Storage) CreateStaff(staff StaffCreate) error {
+	rows, err := s.DB.Query(`
+		INSERT INTO staffs(id, work_days, work_time, break_time)
+		VALUES ($1, $2, $3, $4)`,
+		staff.ID, staff.WorkDays, staff.WorkTime, staff.BreakTime,
+	)
+
+	if err != nil {
+		return errors.New("ERROR: CreateStaff - " + err.Error())
+	}
+
+	defer rows.Close()
+
+	return nil
+}
+
 func (s *Storage) GetDoctor(id int) (Doctor, error) {
 	var doctor Doctor
 
@@ -153,7 +237,7 @@ func (s *Storage) CreateAppointment(a AppointmentCreate) error {
 	)
 
 	if err != nil {
-		return errors.New("ERROR: Create Appointment - " + err.Error())
+		return errors.New("ERROR: CreateAppointment - " + err.Error())
 	}
 
 	defer rows.Close()

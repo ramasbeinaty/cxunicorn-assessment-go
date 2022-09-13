@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"clinicapp/pkg/auth"
 	"clinicapp/pkg/booking"
 	"clinicapp/pkg/canceling"
 	"clinicapp/pkg/deleting"
@@ -11,12 +12,17 @@ import (
 )
 
 func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
-	ds deleting.Service, es editing.Service) {
+	ds deleting.Service, es editing.Service, as auth.Service) {
 
 	router := gin.Default()
 
 	superRoute := router.Group("/api")
 	{
+		authRoute := superRoute.Group("/auth")
+		{
+			authRoute.POST("/register", CreateUser(as))
+		}
+
 		doctorRoute := superRoute.Group("/doctors")
 		{
 			doctorRoute.GET("/:id", GetDoctor(ls))

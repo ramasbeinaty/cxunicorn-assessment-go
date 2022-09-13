@@ -10,7 +10,14 @@ import (
 type Staff struct {
 	User
 	ID        int             `json:"id" db:"id"`
-	WorkDays  pq.Int32Array  `json:"work_days" db:"work_days"`
+	WorkDays  pq.Int32Array   `json:"work_days" db:"work_days"`
+	WorkTime  utils.TimeArray `json:"work_time" db:"work_time"`
+	BreakTime utils.TimeArray `json:"break_time" db:"break_time"`
+}
+
+type StaffCreate struct {
+	ID        int             `json:"id" db:"id"`
+	WorkDays  pq.Int32Array   `json:"work_days" db:"work_days"`
 	WorkTime  utils.TimeArray `json:"work_time" db:"work_time"`
 	BreakTime utils.TimeArray `json:"break_time" db:"break_time"`
 }

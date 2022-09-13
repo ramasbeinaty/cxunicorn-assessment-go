@@ -1,6 +1,7 @@
 package main
 
 import (
+	"clinicapp/pkg/auth"
 	"clinicapp/pkg/booking"
 	"clinicapp/pkg/canceling"
 	"clinicapp/pkg/config"
@@ -27,5 +28,7 @@ func main() {
 	canceler := canceling.NewService(s)
 	deleter := deleting.NewService(s)
 	editer := editing.NewService(s)
-	handler.Handler(lister, booker, canceler, deleter, editer)
+	authenticator := auth.NewService(s)
+
+	handler.Handler(lister, booker, canceler, deleter, editer, authenticator)
 }

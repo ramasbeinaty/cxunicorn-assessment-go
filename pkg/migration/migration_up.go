@@ -59,16 +59,6 @@ func createTables(db *sql.DB) {
 		log.Fatal("Failed to create patients table - ", err)
 	}
 
-	// createStaffsTable := `
-	// 	CREATE TABLE staffs (
-	// 		id serial NOT NULL UNIQUE,
-	// 		work_days TEXT[] NOT NULL,
-	// 		work_time TIME WITH TIME ZONE[] NOT NULL,
-	// 		break_time TIME WITH TIME ZONE[] NOT NULL,
-	// 		unavailable_datetimes TIMESTAMP WITH TIME ZONE[][],
-	// 		CONSTRAINT FK_id FOREIGN KEY (id) REFERENCES users(id)
-	// 	);
-	// `
 	createStaffsTable := `
 		CREATE TABLE staffs (
 			id serial NOT NULL UNIQUE,
