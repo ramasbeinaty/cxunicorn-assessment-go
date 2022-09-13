@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"database/sql"
@@ -23,7 +24,22 @@ func NewStorage() (*Storage, error) {
 
 	s := new(Storage)
 
-	s.DB, err = sql.Open("postgres", "postgres://postgres:123456@localhost:5432/clinic_app2?sslmode=disable")
+	var (
+		username = os.Getenv("DB_USERNAME")
+		password = os.Getenv("DB_PASSWORD")
+		dbName   = os.Getenv("DB_NAME")
+		dbHost   = os.Getenv("DB_HOST")
+		dbPost   = os.Getenv("DB_PORT")
+		sslmode  = os.Getenv("DB_SSLMODE")
+	)
+
+	//Define DB connection string
+	dbURI := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=%s password=%s",
+		dbHost, dbPost, username, dbName, sslmode, password)
+
+	s.DB, err = sql.Open("postgres", dbURI)
+
+	// s.DB, err = sql.Open("postgres", "postgres://postgres:123456@localhost:5432/clinic_app2?sslmode=disable")
 
 	if err != nil {
 		log.Fatal("Failed to connect to database")
@@ -330,7 +346,6 @@ func (s *Storage) IsAppointmentWithinDoctorBreakTime(doctorID int, startDatetime
 
 	return true
 }
-
 
 func (s *Storage) IsAppointmentOverlapping(doctorID int, patientID int, startDatetime time.Time, endDatetime time.Time) bool {
 	var isOverlapping bool = false
