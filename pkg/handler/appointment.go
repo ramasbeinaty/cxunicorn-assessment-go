@@ -21,7 +21,8 @@ func CreateAppointment(bs booking.Service) gin.HandlerFunc {
 		var appointment booking.Appointment
 
 		if err := ctx.BindJSON(&appointment); err != nil {
-			fmt.Println("ERROR: Create Appointment - ", err)
+			fmt.Println("ERROR: Create Appointment - ", err.Error())
+			return
 		}
 
 		// _appointment := booking.Appointment{}
@@ -31,7 +32,16 @@ func CreateAppointment(bs booking.Service) gin.HandlerFunc {
 		// _appointment.StartDatetime, _ = time.Parse(time.RFC822, ctx.PostForm(("start_datetime")))
 		// _appointment.EndDatetime, _ = time.Parse(time.RFC822, ctx.PostForm(("end_datetime")))
 
-		bs.CreateAppointment(appointment)
+		if err := bs.CreateAppointment(appointment); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"response": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusCreated, gin.H{
+			"response": "Successfully created the appointment",
+		})
 
 	}
 
@@ -98,7 +108,7 @@ func EditAppointment(es editing.Service) gin.HandlerFunc {
 		var appointment editing.Appointment
 
 		if err := ctx.BindJSON(&appointment); err != nil {
-			fmt.Println("ERROR: Edit Appointment - ", err)
+			fmt.Println("ERROR: Edit Appointment - ", err.Error())
 		}
 
 		// get the appointment id from the url
