@@ -6,10 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/lib/pq"
 )
 
 // ErrParseData signifies that an error occured while parsing SQL data
@@ -19,6 +18,30 @@ var ErrParseData = errors.New("unable to parse SQL data")
 type TimeArray []time.Time
 
 // type PgTimeArray []pq.NullTime
+
+// Value implements the driver.Valuer interface.
+func (a TimeArray) Value() (driver.Value, error) {
+	if a == nil {
+		return nil, nil
+	}
+
+	if n := len(a); n > 0 {
+		// There will be at least two curly brackets, N bytes of values,
+		// and N-1 bytes of delimiters.
+		b := make([]byte, 1, 1+2*n)
+		b[0] = '{'
+
+		b = strconv.AppendQuote(b, a[0].Format(os.Getenv("TIME_FORMAT")))
+		for i := 1; i < n; i++ {
+			b = append(b, ',')
+			b = strconv.AppendQuote(b, a[i].Format(os.Getenv("TIME_FORMAT")))
+		}
+
+		return string(append(b, '}')), nil
+	}
+
+	return "{}", nil
+}
 
 // Scan implements the sql.Scanner interface
 func (a *TimeArray) Scan(src interface{}) error {
@@ -180,4 +203,4 @@ func scanLinearArray(src, del []byte, typ string) (elems [][]byte, err error) {
 }
 
 // Value implements the driver.Valuer interface
-func (a *TimeArray) Value() (driver.Value, error) { return pq.GenericArray{A: a}.Value() }
+// func (a *TimeArray) Value() (driver.Value, error) { return pq.GenericArray{A: a}.Value() }

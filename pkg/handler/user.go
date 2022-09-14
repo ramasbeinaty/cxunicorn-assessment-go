@@ -61,7 +61,7 @@ func CreateUser(as auth.Service) gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusAccepted, gin.H{
+		ctx.JSON(http.StatusCreated, gin.H{
 			"response": "Successfully created user",
 		})
 
