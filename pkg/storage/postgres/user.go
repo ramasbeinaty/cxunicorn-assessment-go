@@ -26,8 +26,3 @@ type UserCreate struct {
 	Password    string    `json:"password" db:"password"`
 	Role        string    `json:"role" db:"role"`
 }
-
-type UserLogin struct {
-	Email    string `json:"email" db:"email"`
-	Password string `json:"password" db:"password"`
-}

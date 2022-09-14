@@ -53,6 +53,21 @@ func NewStorage() (*Storage, error) {
 	return s, nil
 }
 
+func (s *Storage) GetUser(email string) (User, error) {
+	var _user User
+
+	row, _ := s.DB.Query(`
+		SELECT * FROM users
+		WHERE email = $1`, email)
+
+	if err := scan.RowStrict(&_user, row); err != nil {
+		return _user, errors.New("ERROR: GetUser - " + err.Error())
+	}
+
+	return _user, nil
+
+}
+
 func (s *Storage) CreateUser(user UserCreate) (int, error) {
 
 	var user_id int

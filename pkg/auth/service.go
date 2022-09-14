@@ -4,6 +4,8 @@ import (
 	"clinicapp/pkg/storage/postgres"
 	"encoding/json"
 	"errors"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 var ErrAppointment = errors.New("failed to edit appointment")
@@ -15,6 +17,8 @@ type Repository interface {
 	CreateDoctor(postgres.DoctorCreate) error
 	CreateClinicAdmin(postgres.ClinicAdminCreate) error
 	CreateStaff(postgres.StaffCreate) error
+
+	GetUser(string) (postgres.User, error)
 }
 
 // provide listing operations for authenticating/authorizing users
@@ -23,6 +27,8 @@ type Service interface {
 	CreatePatient(PatientRegister) error
 	CreateDoctor(DoctorRegister) error
 	CreateClinicAdmin(ClinicAdminRegister) error
+
+	LoginUser(UserLogin) (User, string, error)
 }
 
 type service struct {
@@ -32,6 +38,52 @@ type service struct {
 // creates a listing service with the necessary dependencies
 func NewService(repo Repository) Service {
 	return &service{repo}
+}
+
+func (s *service) LoginUser(loginCredentials UserLogin) (User, string, error) {
+	// returns the user, their token and error
+	var _user postgres.User
+	var user User
+	var token string
+
+	_user, err := s.repo.GetUser(loginCredentials.Email)
+
+	println(_user)
+
+	if err != nil {
+		return user, "", errors.New("ERROR: LoginUser - " + err.Error())
+	}
+
+	// decrypt received password and check if equal
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginCredentials.Password))
+
+	// check if password matches
+	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
+		return user, "", errors.New("ERROR: LoginUser - Incorrect password -" + err.Error())
+	}
+
+	// generate jwt token
+	// expiresAt := time.Now().Add(time.Minute * 100000).Unix()
+
+	// tk := user.Token{
+	// 	UserID: user.ID,
+	// 	Name:   user.Name,
+	// 	Email:  user.Email,
+	// 	StandardClaims: &jwt.StandardClaims{
+	// 		ExpiresAt: expiresAt,
+	// 	},
+	// }
+
+	// token := jwt.NewWithClaims(jwt.GetSigningMethod("HS256"), tk)
+
+	// tokenString, error := token.SignedString([]byte("secret"))
+	// if error != nil {
+	// 	fmt.Println(error)
+	// }
+
+	return user, token, nil
+
 }
 
 // implement service methods
