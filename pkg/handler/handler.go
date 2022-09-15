@@ -21,6 +21,7 @@ func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
 		authRoute := superRoute.Group("/auth")
 		{
 			authRoute.POST("/register", CreateUser(as))
+			authRoute.POST("/login", LoginUser(as))
 		}
 
 		doctorRoute := superRoute.Group("/doctors")

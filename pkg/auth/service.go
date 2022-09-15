@@ -4,7 +4,10 @@ import (
 	"clinicapp/pkg/storage/postgres"
 	"encoding/json"
 	"errors"
+	"os"
+	"time"
 
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,14 +47,14 @@ func (s *service) LoginUser(loginCredentials UserLogin) (User, string, error) {
 	// returns the user, their token and error
 	var _user postgres.User
 	var user User
-	var token string
+	var tokenStr = ""
+	SECRET_KEY := os.Getenv("SECRET_KEY")
+	EXPIRY_DURATION := os.Getenv("EXPIRY_DURATION")
 
 	_user, err := s.repo.GetUser(loginCredentials.Email)
 
-	println(_user)
-
 	if err != nil {
-		return user, "", errors.New("ERROR: LoginUser - " + err.Error())
+		return user, tokenStr, errors.New("ERROR: LoginUser - " + err.Error())
 	}
 
 	// decrypt received password and check if equal
@@ -64,25 +67,27 @@ func (s *service) LoginUser(loginCredentials UserLogin) (User, string, error) {
 	}
 
 	// generate jwt token
-	// expiresAt := time.Now().Add(time.Minute * 100000).Unix()
+	_expiryDuration, _ := time.ParseDuration(EXPIRY_DURATION)
+	expiresAt := time.Now().Add(time.Minute * _expiryDuration).Unix()
 
-	// tk := user.Token{
-	// 	UserID: user.ID,
-	// 	Name:   user.Name,
-	// 	Email:  user.Email,
-	// 	StandardClaims: &jwt.StandardClaims{
-	// 		ExpiresAt: expiresAt,
-	// 	},
-	// }
+	_token := Token{
+		UserID: _user.ID,
+		Name:   _user.FirstName + " " + _user.LastName,
+		Email:  _user.Email,
+		Role:   _user.Role,
+		Claims: &jwt.StandardClaims{
+			ExpiresAt: expiresAt,
+		},
+	}
 
-	// token := jwt.NewWithClaims(jwt.GetSigningMethod("HS256"), tk)
+	tokenStr, err = jwt.NewWithClaims(jwt.SigningMethodHS256, _token).
+		SignedString([]byte(SECRET_KEY))
 
-	// tokenString, error := token.SignedString([]byte("secret"))
-	// if error != nil {
-	// 	fmt.Println(error)
-	// }
+	if err != nil {
+		return user, tokenStr, errors.New("CreateToken - " + err.Error())
+	}
 
-	return user, token, nil
+	return user, tokenStr, nil
 
 }
 

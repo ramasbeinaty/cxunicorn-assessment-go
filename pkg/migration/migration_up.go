@@ -131,7 +131,7 @@ func populateTables(db *sql.DB) {
 		role
 	) values (
 		'rama@gmail.com',
-		'123456',
+		'$2a$10$jnbQAO21L2/Cfvm3Sy0qRugExJJBkOi2hstrZtMw78njs/YxW5kwO',
 		'rama',
 		'doe',
 		'2021-10-10',
@@ -140,7 +140,7 @@ func populateTables(db *sql.DB) {
 	),
 	(
 		'raneem@gmail.com',
-		'123456',
+		'$2a$10$jnbQAO21L2/Cfvm3Sy0qRugExJJBkOi2hstrZtMw78njs/YxW5kwO',
         'raneem',
         'doe',
         '2020-09-20',
@@ -149,7 +149,7 @@ func populateTables(db *sql.DB) {
 	),
 	(
 		'ronaldo@gmail.com',
-		'123456',
+		'$2a$10$jnbQAO21L2/Cfvm3Sy0qRugExJJBkOi2hstrZtMw78njs/YxW5kwO',
         'ronaldo',
         'doe',
         '2020-09-20',
@@ -158,7 +158,7 @@ func populateTables(db *sql.DB) {
 	),
 	(
 		'patrik@gmail.com',
-		'123456',
+		'$2a$10$jnbQAO21L2/Cfvm3Sy0qRugExJJBkOi2hstrZtMw78njs/YxW5kwO',
         'patrik',
         'doe',
         '2020-09-20',
@@ -167,7 +167,7 @@ func populateTables(db *sql.DB) {
 	),
 	(
 		'prashant@gmail.com',
-		'123456',
+		'$2a$10$jnbQAO21L2/Cfvm3Sy0qRugExJJBkOi2hstrZtMw78njs/YxW5kwO',
         'prashant',
         'doe',
         '2020-09-20',
@@ -176,7 +176,7 @@ func populateTables(db *sql.DB) {
 	),
 	(
 		'amanda@gmail.com',
-		'123456',
+		'$2a$10$jnbQAO21L2/Cfvm3Sy0qRugExJJBkOi2hstrZtMw78njs/YxW5kwO',
         'amanda',
         'doe',
         '2020-09-20',

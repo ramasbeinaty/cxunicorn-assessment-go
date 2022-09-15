@@ -13,28 +13,43 @@ type UserRole struct {
 	Role string `json:"role"`
 }
 
+func LoginUser(as auth.Service) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var user auth.UserLogin
+
+		if err := ctx.BindJSON(&user); err != nil {
+			fmt.Println("ERROR: LoginUser - " + err.Error())
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"response": "Failed to login user - " + err.Error(),
+			})
+			return
+		}
+
+		logged_user, token, err := as.LoginUser(user)
+
+		if err != nil {
+			fmt.Println("ERROR: LoginUser - " + err.Error())
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"response": "Failed to login user",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusAccepted, gin.H{
+			"response":    "Successfully logged in user",
+			"token":       token,
+			"logged_user": logged_user,
+		})
+
+	}
+}
+
 func CreateUser(as auth.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-
-		// var _userRole UserRole
-
-		// if err := ctx.BindJSON(&_userRole); err != nil {
-		// 	fmt.Println("ERROR: CreateUser - ", err)
-		// 	ctx.JSON(http.StatusBadRequest, gin.H{
-		// 		"response": "Failed to get the user role",
-		// 	})
-		// }
-
-		// if _userRole.Role == PatientRole {
-		// 	var user auth.PatientRegister
-
-		// 	as.CreatePatient(user)
-		// }
-
 		var user auth.UserRegister
 
 		if err := ctx.BindJSON(&user); err != nil {
-			fmt.Println("ERROR: CreateUser - ", err)
+			fmt.Println("ERROR: CreateUser - " + err.Error())
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"response": "Failed to create user",
 			})
@@ -44,7 +59,7 @@ func CreateUser(as auth.Service) gin.HandlerFunc {
 		_pass, err := bcrypt.GenerateFromPassword([]byte(user.UserDetails.Password), bcrypt.DefaultCost)
 
 		if err != nil {
-			fmt.Println("ERROR: CreateUser - password encryption failed - ", err)
+			fmt.Println("ERROR: CreateUser - password encryption failed - " + err.Error())
 
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"response": "Failed to create user - failed to encrypt password",
