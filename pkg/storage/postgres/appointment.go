@@ -7,8 +7,8 @@ type Appointment struct {
 	ID            int       `json:"id"`
 	PatientID     int       `json:"patient_id"`
 	DoctorID      int       `json:"doctor_id"`
-	CreatedAt     time.Time `json:"created_at"`
 	CreatedBy     int       `json:"created_by"`
+	CreatedAt     time.Time `json:"created_at"`
 	StartDatetime time.Time `json:"start_datetime"`
 	EndDatetime   time.Time `json:"end_datetime"`
 	IsCanceled    bool      `json:"is_canceled"`

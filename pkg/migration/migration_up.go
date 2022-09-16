@@ -105,7 +105,7 @@ func createTables(db *sql.DB) {
 		patient_id INTEGER NOT NULL,
 		doctor_id INTEGER NOT NULL,
 		created_by INTEGER NOT NULL,
-		created_at timestamp WITH TIME ZONE NOT NULL DEFAULT (now()),
+		created_at timestamp WITH TIME ZONE NOT NULL DEFAULT (now() at time zone 'utc'),
 		start_datetime timestamp WITH TIME ZONE NOT NULL,
 		end_datetime timestamp WITH TIME ZONE NOT NULL,
 		is_canceled BOOLEAN DEFAULT FALSE

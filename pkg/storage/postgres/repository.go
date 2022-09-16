@@ -323,11 +323,13 @@ func (s *Storage) GetAllAppointmentsOfDoctor(doctorID int, date time.Time) []App
 
 	rows, err := s.DB.Query(`
 		SELECT * 
-		FROM appointments a
-		WHERE a.doctors_id = $1	AND CAST(a.start_datetime as DATE) = CAST($2 as DATE)`, doctorID, date)
+		FROM appointments
+		WHERE doctor_id = $1 
+		AND CAST(start_datetime as DATE) = CAST($2 as DATE)
+		ORDER BY start_datetime ASC`, doctorID, date)
 
 	if err != nil {
-		fmt.Println("GetAllAppointment - Was not able to execute query", err.Error())
+		fmt.Println("INFO: GetAllAppointments - Was not able to get any appointment of given doctor - ", err.Error())
 		return appointments
 	}
 
@@ -337,7 +339,7 @@ func (s *Storage) GetAllAppointmentsOfDoctor(doctorID int, date time.Time) []App
 		var appointment Appointment
 
 		if err = rows.Scan(&appointment.ID, &appointment.PatientID, &appointment.DoctorID,
-			&appointment.CreatedAt, &appointment.CreatedBy, &appointment.StartDatetime,
+			&appointment.CreatedBy, &appointment.CreatedAt, &appointment.StartDatetime,
 			&appointment.EndDatetime, &appointment.IsCanceled); err != nil {
 			fmt.Println("ERROR: GetAllAppointment - ", err)
 			return appointments

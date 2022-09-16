@@ -21,7 +21,7 @@ func CreateAppointment(bs booking.Service) gin.HandlerFunc {
 		var appointment booking.Appointment
 
 		if err := ctx.BindJSON(&appointment); err != nil {
-			fmt.Println("ERROR: Create Appointment - ", err.Error())
+			fmt.Println("ERROR: CreateAppointment - ", err.Error())
 			return
 		}
 
@@ -51,13 +51,18 @@ func GetAllAppointmentsOfDoctor(ls listing.Service) gin.HandlerFunc {
 	var appointments []listing.Appointment
 
 	return func(ctx *gin.Context) {
-		// _doctor_id := ctx.Query("doctor_id")
-		// date:= ctx.Query("date")
+		_doctorID, _ := strconv.Atoi(ctx.Params.ByName("id"))
 
-		// if _doctor_id != "" && date != "" {
-		// 	doctor_id, _ := strconv.Atoi(_doctor_id)
-		// 	appointments = ls.GetAllAppointmentsOfDoctor(doctor_id, date)
-		// }
+		var appointmentsRequest listing.AppointmentsRequest
+
+		if err := ctx.BindJSON(&appointmentsRequest); err != nil {
+			fmt.Println("ERROR: GetAvailableSlotsOfDoctor - ", err.Error())
+			return
+
+		}
+
+		appointments = ls.GetAllAppointmentsOfDoctor(_doctorID, appointmentsRequest.Date)
+
 		ctx.JSON(http.StatusOK, gin.H{
 			"response": appointments,
 		})

@@ -22,6 +22,14 @@ func main() {
 	// migration.MigrateDown()
 	// migration.MigrateUp()
 
+	// loc, err := time.LoadLocation("UTC")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+
+	// time.Local = loc
+
 	s, _ := postgres.NewStorage()
 	lister := listing.NewService(s)
 	booker := booking.NewService(s)

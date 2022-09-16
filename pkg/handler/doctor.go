@@ -3,6 +3,7 @@ package handler
 import (
 	"clinicapp/pkg/listing"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -24,9 +25,9 @@ import (
 // a handler for GET /doctors/:id requests
 func GetDoctor(ls listing.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		doctor_id, _ := strconv.Atoi(ctx.Params.ByName("id"))
+		doctorID, _ := strconv.Atoi(ctx.Params.ByName("id"))
 
-		doctor, err := ls.GetDoctor(doctor_id)
+		doctor, err := ls.GetDoctor(doctorID)
 		if err == listing.ErrIdNotFound {
 			ctx.Error(errors.New("Get Doctor - " + listing.ErrIdNotFound.Error()))
 		}
@@ -43,6 +44,24 @@ func GetAllDoctors(ls listing.Service) gin.HandlerFunc {
 		doctors := ls.GetAllDoctors()
 		ctx.JSON(http.StatusOK, gin.H{
 			"response": doctors,
+		})
+	}
+}
+
+func GetAvailableSlotsOfDoctor(ls listing.Service) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		doctorID, _ := strconv.Atoi(ctx.Params.ByName("id"))
+
+		var doctorSlots listing.DoctorSlots
+
+		if err := ctx.BindJSON(&doctorSlots); err != nil {
+			fmt.Println("ERROR: GetAvailableSlotsOfDoctor - ", err.Error())
+			return
+		}
+
+		availableSlots := ls.GetAvailableSlotsPerDay(doctorID, doctorSlots.SlotsDate)
+		ctx.JSON(http.StatusOK, gin.H{
+			"response": availableSlots,
 		})
 	}
 }

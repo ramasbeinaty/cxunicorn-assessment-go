@@ -27,13 +27,14 @@ func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
 		doctorRoute := superRoute.Group("/doctors")
 		{
 			doctorRoute.GET("/:id", GetDoctor(ls))
+			doctorRoute.GET("/:id/slots", GetAvailableSlotsOfDoctor(ls))
 			doctorRoute.GET("/", GetAllDoctors(ls))
 		}
 
 		appointmentRoute := superRoute.Group("/appointments")
 		{
 			appointmentRoute.POST("/", CreateAppointment(bs))
-			// appointmentRoute.GET("/", GetAllAppointmentsOfDoctor(ls))
+			appointmentRoute.GET("/doctors/:id", GetAllAppointmentsOfDoctor(ls))
 			appointmentRoute.PATCH("/:id", CancelAppointment(cs))
 			appointmentRoute.DELETE("/:id", DeleteAppointment(ds))
 			appointmentRoute.PUT("/:id", EditAppointment(es))
