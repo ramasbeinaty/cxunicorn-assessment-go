@@ -107,13 +107,16 @@ func (s *service) GetAvailableSlotsPerDay(doctorID int, slotDate time.Time) [][]
 	var _appointments []postgres.Appointment
 	var availableSlots [][]time.Time = [][]time.Time{}
 
+	// var availableSlotsBeforeBreakTime [][]time.Time = [][]time.Time{}
+
 	_doctor, err := s.repo.GetDoctor(doctorID)
 
 	if err != nil {
 		fmt.Println("ERROR: GetAvailableSlotsPerDay - Failed to find specified doctor")
-		// return [][]time.Time{}
 		return availableSlots
 	}
+
+	// timezoneLocation := time.LoadLocation("UTC")
 
 	// re-declare and initialize doctor work and break times so dates are not taken into consideration when comparing timestamps
 	_doctorWorkTime := []time.Time{
@@ -142,15 +145,11 @@ func (s *service) GetAvailableSlotsPerDay(doctorID int, slotDate time.Time) [][]
 
 	_appointments = s.repo.GetAllAppointmentsOfDoctor(doctorID, slotDate)
 
+	// BASE CASE of available slots when no appointments are booked
 	// if doctor does not any appointments schedules, they would have 2 available slot ranges
 	// which is starting from work time till break time starts,
 	// and from when the break time ends till the end of work time
 	if len(_appointments) < 1 {
-		// availableSlots := [][]time.Time{
-		// 	{_doctor.WorkTime[0], _doctor.BreakTime[0]},
-		// 	{_doctor.BreakTime[1], _doctor.WorkTime[1]},
-		// }
-
 		availableSlots = append(availableSlots,
 			[]time.Time{_doctorWorkTime[0], _doctorBreakTime[0]},
 			[]time.Time{_doctorBreakTime[1], _doctorWorkTime[1]},
@@ -159,101 +158,101 @@ func (s *service) GetAvailableSlotsPerDay(doctorID int, slotDate time.Time) [][]
 		return availableSlots
 	}
 
-	// if work starts before first appointment, then set first available slot range
-	// to [work start time - appointment start time]
-	firstAppointment := _appointments[0]
-	if _doctorWorkTime[0].Before(firstAppointment.StartDatetime) {
+	// FIND AVAILABLE TIME SLOTS BEFORE BREAK TIME
+	// when at least one appointment is booked
+	// append the ascending ordered appointments until the start of appointment
+	// is not after the break time start
+	// if it is, append the break end time and exit the loop
+	// (ending the first half of the day, before break time)
+
+	// APPEND FIRST AVAILABLE SLOT
+	// if first appointment does start at the same time as work time starts and is before break time,
+	// append the slot between [start of work, start of appointment]
+	var counter int = 0
+
+	if !_appointments[counter].StartDatetime.UTC().Equal(_doctorWorkTime[0]) &&
+		_appointments[counter].StartDatetime.UTC().Before(_doctorBreakTime[0]) {
 		availableSlots = append(availableSlots,
-			[]time.Time{_doctorWorkTime[0], firstAppointment.StartDatetime})
-
-		// disregard first appointment if it starts at the same time as when the doctor starts working
-		// as it was already taken care of above
-		// _appointments = _appointments[1:]
-
-		// if len(_appointments) < 1 {
-
-		// 	if firstAppointment.StartDatetime.Before(_doctorBreakTime[0]) {
-		// 		availableSlots = append(availableSlots,
-		// 			[]time.Time{firstAppointment.EndDatetime, _doctorBreakTime[0]},
-		// 			[]time.Time{_doctorBreakTime[1], _doctorWorkTime[1]})
-		// 	} else {
-		// 		availableSlots = append(availableSlots,
-		// 			[]time.Time{firstAppointment.EndDatetime, _doctorWorkTime[1]})
-		// 	}
-
-		// 	return availableSlots
-		// }
+			[]time.Time{_doctorWorkTime[0], _appointments[counter].StartDatetime.UTC()})
 	}
 
-	reachedAppointmentsAfterBreak := false
-	for i, _appointment := range _appointments {
-		// find only the first next appointment that starts after break time
-		// if found, append available slots with ranges [end time of appointment - start time of break]
-		// and [end time of break - start of next appointment]
-		// if _appointment.StartDatetime.After(_doctorBreakTime[0]) && !reachedAppointmentsAfterBreak {
-		// 	availableSlots = append(availableSlots,
-		// 		[]time.Time{firstAppointment.EndDatetime, _doctorBreakTime[0]},
-		// 		[]time.Time{_doctorBreakTime[1], _appointment.StartDatetime},
-		// 	)
-		// 	reachedAppointmentsAfterBreak = true
-		// 	continue
-		// }
+	// APPEND THE REST OF APPOINTMENTS BEFORE BREAK TIME
+	appendedBreakTimeStart := false
 
-		// if i = len(_appointments)-1{
+	for {
 
-		// }
-
-		if _appointment.StartDatetime.After(_doctorBreakTime[0]) && !reachedAppointmentsAfterBreak {
-			availableSlots = append(availableSlots,
-				[]time.Time{_appointment.EndDatetime, _doctorBreakTime[0]},
-				[]time.Time{_doctorBreakTime[1], _appointments[i+1].StartDatetime},
-			)
-			reachedAppointmentsAfterBreak = true
-			continue
+		if counter+1 >= len(_appointments) {
+			break
 		}
 
-		// append an available slot from appointment's end time till the start of the next one
+		// make sure the appointment lies in the first half (before break time), otherwise break
+		if _appointments[counter+1].StartDatetime.UTC().After(_doctorBreakTime[0]) {
+			break
+		}
+
 		availableSlots = append(availableSlots,
-			[]time.Time{_appointment.EndDatetime, _appointments[i+1].StartDatetime})
+			[]time.Time{_appointments[counter].EndDatetime.UTC(),
+				_appointments[counter+1].StartDatetime.UTC()})
+
+		counter++
 
 	}
 
-	// if last appointment ends before doctor's work time ends
-	// append an available slot with range [end of last appointment - end of doctor's work time]
-	lastAppointment := _appointments[len(_appointments)-1]
+	var appendedWorkTime = false
 
-	// if lastAppointment.EndDatetime.Before(_doctorWorkTime[1]) {
-	// 	availableSlots = append(availableSlots,
-	// 		[]time.Time{lastAppointment.EndDatetime, _doctorWorkTime[1]},
-	// 	)
-	// }
+	// APPEND REST OF APPOINTMENTS AFTER BREAK TIME
+	// make sure start of break time is appended
+	// and append the end of break time to start populating the second half
+	if !appendedBreakTimeStart {
+		availableSlots = append(availableSlots,
+			[]time.Time{_appointments[counter].EndDatetime.UTC(), _doctorBreakTime[0]})
 
-	if lastAppointment.EndDatetime.Before(_doctorBreakTime[0]) {
+		if counter+1 >= len(_appointments) {
+			availableSlots = append(availableSlots,
+				[]time.Time{_doctorBreakTime[1], _doctorWorkTime[1]})
+
+			appendedWorkTime = true
+
+		} else {
+			counter++
+
+			availableSlots = append(availableSlots,
+				[]time.Time{_doctorBreakTime[1], _appointments[counter].StartDatetime.UTC()})
+		}
+
+	}
+
+	// append appointments in the second half (after break time)
+	for {
+
+		// check if the last appointment booked is reached
+		// if so, add the last possible slot of the date (end date time of appointment, end date time of work)
+		// if the last appointment does not end at the same time of work
+		// also make sure break time is taken into consideration
+		if counter+1 >= len(_appointments) {
+			// if appendedBreakTimeStart && !appendedBreakTimeEnd {
+			// 	availableSlots = append(availableSlots,
+			// 		[]time.Time{_doctorBreakTime[1], _doctorWorkTime[1]})
+
+			// 	break
+			// }
+
+			if !appendedWorkTime && !_appointments[counter].EndDatetime.UTC().Equal(_doctorWorkTime[1]) {
+				availableSlots = append(availableSlots,
+					[]time.Time{_appointments[counter].EndDatetime.UTC(), _doctorWorkTime[1]})
+			}
+
+			break
+
+		}
+
 		availableSlots = append(availableSlots,
-			[]time.Time{lastAppointment.EndDatetime, _doctorBreakTime[0]},
-			[]time.Time{_doctorBreakTime[1], _doctorWorkTime[1]})
-	} else {
-		availableSlots = append(availableSlots,
-			[]time.Time{lastAppointment.EndDatetime, _doctorWorkTime[1]})
+			[]time.Time{_appointments[counter].EndDatetime.UTC(),
+				_appointments[counter+1].StartDatetime.UTC()})
+
+		counter++
 	}
 
 	return availableSlots
-
-	// // 2 is added to accomodate both the work and break time ranges
-	// availableSlots := make([][]time.Time, len(_appointments) + 2)
-	// for i := range availableSlots {
-	// 	availableSlots[i] = make([]time.Time, 2)
-	// }
-
-	// firstAppointment = _appointments[0]
-	// // if start of first appointment equals start of work time, then set the first available slot to start
-	// // from when the first appointment ends
-	// if firstAppointment[0] == doctor.WorkTime[0] {
-	// 	availableSlots = append(availableSlots, {
-	// 		{firstAppointment[1]}
-	// 	})
-	// }
-
-	// availableSlots = append(availableSlots, _appointments[])
 
 }
