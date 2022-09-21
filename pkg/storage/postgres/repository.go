@@ -432,16 +432,18 @@ func (s *Storage) IsAppointmentWithinDoctorWorkTime(doctorID int, startDatetime 
 func (s *Storage) IsAppointmentWithinDoctorBreakTime(doctorID int, startDatetime time.Time, endDatetime time.Time) bool {
 	var _id int
 
+	var break_time utils.TimeArray
+
 	row := s.DB.QueryRow(`
-		SELECT id
+		SELECT id, break_time
 		FROM staffs
 		WHERE id=$1
 		AND (break_time[1], break_time[2]) 
 		OVERLAPS (cast($2::timestamp at time zone 'utc' as time), cast($3::timestamp at time zone 'utc' as time));
 	`, doctorID, startDatetime, endDatetime)
 
-	if err := row.Scan(&_id); err != nil {
-		fmt.Println("IsAppointmentWithinDoctorWorkTime - ", err)
+	if err := row.Scan(&_id, &break_time); err != nil {
+		fmt.Println("IsAppointmentWithinDoctorBreakTime - ", err)
 		return false
 	}
 

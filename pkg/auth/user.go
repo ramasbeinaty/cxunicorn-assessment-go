@@ -8,6 +8,7 @@ type UserRegister struct {
 }
 
 type User struct {
+	ID          int       `json:"id"`
 	FirstName   string    `json:"first_name"`
 	LastName    string    `json:"last_name"`
 	DOB         time.Time `json:"dob"`
@@ -20,5 +21,11 @@ type User struct {
 type UserLogin struct {
 	Email    string `json:"email" db:"email"`
 	Password string `json:"password" db:"password"`
-	Token    string `json:"token"`
+	// Token    string `json:"token"`
+}
+
+type UserAuthorization struct {
+	isPatient bool
+	isDoctor bool
+	
 }

@@ -4,8 +4,6 @@ import (
 	"clinicapp/pkg/storage/postgres"
 	"encoding/json"
 	"errors"
-	"os"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
@@ -31,7 +29,12 @@ type Service interface {
 	CreateDoctor(DoctorRegister) error
 	CreateClinicAdmin(ClinicAdminRegister) error
 
-	LoginUser(UserLogin) (User, string, error)
+	LoginUser(UserLogin) (string, error)
+	GenerateJWT(*Claims) (string, error)
+	AuthenticateUser(UserLogin, User) error
+	AuthorizeUser(string, string) (bool, error)
+	GetTokenFromString(string, *Claims) (*jwt.Token, error)
+	VerifyJWT(string) (bool, *Claims)
 }
 
 type service struct {
@@ -43,52 +46,86 @@ func NewService(repo Repository) Service {
 	return &service{repo}
 }
 
-func (s *service) LoginUser(loginCredentials UserLogin) (User, string, error) {
+func (s *service) LoginUser(loginCredentials UserLogin) (string, error) {
 	// returns the user, their token and error
 	var _user postgres.User
 	var user User
 	var tokenStr = ""
-	SECRET_KEY := os.Getenv("SECRET_KEY")
-	EXPIRY_DURATION := os.Getenv("EXPIRY_DURATION")
 
+	// find user
 	_user, err := s.repo.GetUser(loginCredentials.Email)
-
 	if err != nil {
-		return user, tokenStr, errors.New("ERROR: LoginUser - " + err.Error())
+		return tokenStr, errors.New("ERROR: LoginUser - Failed to find user - " + err.Error())
 	}
 
-	// decrypt received password and check if equal
+	// map user
+	user.Email = _user.Email
+	user.FirstName = _user.FirstName
+	user.LastName = _user.LastName
+	user.Password = _user.Password
+	user.PhoneNumber = _user.PhoneNumber
+	user.Role = _user.Role
+	user.DOB = _user.DOB
+	user.ID = _user.ID
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginCredentials.Password))
+	// authenticate user
+	err = s.AuthenticateUser(loginCredentials, user)
+	if err != nil {
+		return tokenStr, errors.New("ERROR: LoginUser - Failed to authenticate user - " + err.Error())
+	}
+
+	// define the custom token claims
+	var claims = &Claims{}
+	claims.UserID = user.ID
+	claims.Email = user.Email
+	claims.Role = user.Role
+	claims.Name = user.FirstName + " " + user.LastName
+
+	// generate jwt token
+	tokenStr, err = s.GenerateJWT(claims)
+
+	if err != nil {
+		return tokenStr, errors.New("ERROR: LoginUser - Failed to generate jwt token - " + err.Error())
+	}
+
+	return tokenStr, nil
+}
+
+func (s *service) AuthenticateUser(loginCredentials UserLogin, user User) error {
+
+	// decrypt received password and check if equal
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginCredentials.Password))
 
 	// check if password matches
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-		return user, "", errors.New("ERROR: LoginUser - Incorrect password -" + err.Error())
+		return errors.New("ERROR: AuthenticateUser - Incorrect password -" + err.Error())
 	}
 
-	// generate jwt token
-	_expiryDuration, _ := time.ParseDuration(EXPIRY_DURATION)
-	expiresAt := time.Now().Add(time.Minute * _expiryDuration).Unix()
+	return nil
+}
 
-	_token := Token{
-		UserID: _user.ID,
-		Name:   _user.FirstName + " " + _user.LastName,
-		Email:  _user.Email,
-		Role:   _user.Role,
-		Claims: &jwt.StandardClaims{
-			ExpiresAt: expiresAt,
-		},
+func (s *service) AuthorizeUser(authorizedRole string, userRole string) (bool, error) {
+	if authorizedRole == "" {
+		return false, errors.New("AuthorizeUser - authorized role field cannot be empty")
 	}
 
-	tokenStr, err = jwt.NewWithClaims(jwt.SigningMethodHS256, _token).
-		SignedString([]byte(SECRET_KEY))
-
-	if err != nil {
-		return user, tokenStr, errors.New("CreateToken - " + err.Error())
+	if userRole == "" {
+		return false, errors.New("AuthorizeUser - user role field cannot be empty")
 	}
 
-	return user, tokenStr, nil
+	if authorizedRole != Roles.ClinicAdmin && authorizedRole != Roles.Patient && authorizedRole != Roles.Doctor {
+		return false, errors.New("AuthorizeUser - authorized role field is not a valid role")
+	}
 
+	if userRole != Roles.ClinicAdmin && userRole != Roles.Patient && userRole != Roles.Doctor {
+		return false, errors.New("AuthorizeUser - user role field is not a valid role")
+	}
+
+	if authorizedRole != userRole {
+		return false, errors.New("AuthorizeUser - user role does not match authorized role")
+	}
+
+	return true, nil
 }
 
 // implement service methods
@@ -96,7 +133,7 @@ func (s *service) CreateUser(user UserRegister) error {
 
 	// parse user to the role's corresponding model - patient, doctor or clinic admin
 	// then call the corresponding functions to create those models and commit to db
-	if user.UserDetails.Role == postgres.PatientRole {
+	if user.UserDetails.Role == Roles.Patient {
 		var _patient PatientRegister
 		json.Unmarshal([]byte(user.RoleDetails), &_patient)
 
@@ -110,7 +147,7 @@ func (s *service) CreateUser(user UserRegister) error {
 
 		return s.CreatePatient(_patient)
 
-	} else if user.UserDetails.Role == postgres.DoctorRole {
+	} else if user.UserDetails.Role == Roles.Doctor {
 		var _doctor DoctorRegister
 		json.Unmarshal([]byte(user.RoleDetails), &_doctor)
 
@@ -124,7 +161,7 @@ func (s *service) CreateUser(user UserRegister) error {
 
 		return s.CreateDoctor(_doctor)
 
-	} else if user.UserDetails.Role == postgres.ClinicAdminRole {
+	} else if user.UserDetails.Role == Roles.ClinicAdmin {
 		var _clinicAdmin ClinicAdminRegister
 		json.Unmarshal([]byte(user.RoleDetails), &_clinicAdmin)
 

@@ -18,27 +18,24 @@ func LoginUser(as auth.Service) gin.HandlerFunc {
 		var user auth.UserLogin
 
 		if err := ctx.BindJSON(&user); err != nil {
-			fmt.Println("ERROR: LoginUser - " + err.Error())
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"response": "Failed to login user - " + err.Error(),
 			})
 			return
 		}
 
-		logged_user, token, err := as.LoginUser(user)
+		token, err := as.LoginUser(user)
 
 		if err != nil {
-			fmt.Println("ERROR: LoginUser - " + err.Error())
 			ctx.JSON(http.StatusBadRequest, gin.H{
-				"response": "Failed to login user",
+				"response": "Failed to login user - " + err.Error(),
 			})
 			return
 		}
 
 		ctx.JSON(http.StatusAccepted, gin.H{
-			"response":    "Successfully logged in user",
-			"token":       token,
-			"logged_user": logged_user,
+			"response": "Successfully logged in user",
+			"token":    token,
 		})
 
 	}
