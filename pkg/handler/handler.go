@@ -19,7 +19,6 @@ func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
 
 	superRoute := router.Group("/api")
 	{
-		superRoute.Use(middleware.AuthenticateUser(as))
 
 		authRoute := superRoute.Group("/auth")
 		{
@@ -28,6 +27,7 @@ func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
 		}
 
 		doctorRoute := superRoute.Group("/doctors")
+		doctorRoute.Use(middleware.AuthenticateUser(as))
 		{
 			doctorRoute.GET("/:id", GetDoctor(ls))
 			doctorRoute.GET("/:id/slots", GetAvailableSlotsOfDoctor(ls))
@@ -35,6 +35,7 @@ func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
 		}
 
 		appointmentRoute := superRoute.Group("/appointments")
+		appointmentRoute.Use(middleware.AuthenticateUser(as))
 		{
 			appointmentRoute.POST("/", middleware.AuthorizeUser(as, auth.Roles.Patient), CreateAppointment(bs))
 			appointmentRoute.GET("/doctors/:id", GetAllAppointmentsOfDoctor(ls))

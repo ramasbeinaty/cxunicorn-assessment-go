@@ -7,12 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ReturnUnauthorized(ctx *gin.Context) {
-	ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-		"status":  http.StatusUnauthorized,
-		"message": "Unauthorized access",
-	})
-}
+// func ReturnUnauthorized(ctx *gin.Context) {
+// 	ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+// 		"response": "Unauthorized access",
+// 	})
+// }
 
 func AuthorizeUser(as auth.Service, authorizedRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -22,16 +21,14 @@ func AuthorizeUser(as auth.Service, authorizedRole string) gin.HandlerFunc {
 		isAuthorized, _ := as.AuthorizeUser(userRole, authorizedRole)
 
 		if !isAuthorized {
-			// ctx.JSON(http.StatusUnauthorized, gin.H{
-			// 	"response": "User is unauthorized - " + err.Error(),
-			// })
-			// return
-
-			ReturnUnauthorized(ctx)
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"response": "Unauthorized access",
+			})
+			return
 		}
 
 		ctx.JSON(http.StatusAccepted, gin.H{
-			"response": "User is authorized",
+			"response": "Authorized access",
 		})
 
 	}
@@ -44,7 +41,7 @@ func AuthenticateUser(as auth.Service) gin.HandlerFunc {
 		tokenStr = ctx.Request.Header.Get("Token")
 
 		if tokenStr == "" {
-			ctx.JSON(http.StatusBadRequest, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"response": "AuthenticateUser - Token header is not found",
 			})
 			return
@@ -53,7 +50,7 @@ func AuthenticateUser(as auth.Service) gin.HandlerFunc {
 		isValid, claims := as.VerifyJWT(tokenStr)
 
 		if !isValid {
-			ctx.JSON(http.StatusUnauthorized, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusAccepted, gin.H{
 				"response": "AuthenticateUser - Token is invalid",
 			})
 			return

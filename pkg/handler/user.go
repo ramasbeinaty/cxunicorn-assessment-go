@@ -18,7 +18,7 @@ func LoginUser(as auth.Service) gin.HandlerFunc {
 		var user auth.UserLogin
 
 		if err := ctx.BindJSON(&user); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"response": "Failed to login user - " + err.Error(),
 			})
 			return
@@ -27,13 +27,13 @@ func LoginUser(as auth.Service) gin.HandlerFunc {
 		token, err := as.LoginUser(user)
 
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"response": "Failed to login user - " + err.Error(),
 			})
 			return
 		}
 
-		ctx.JSON(http.StatusAccepted, gin.H{
+		ctx.AbortWithStatusJSON(http.StatusAccepted, gin.H{
 			"response": "Successfully logged in user",
 			"token":    token,
 		})
@@ -47,8 +47,8 @@ func CreateUser(as auth.Service) gin.HandlerFunc {
 
 		if err := ctx.BindJSON(&user); err != nil {
 			fmt.Println("ERROR: CreateUser - " + err.Error())
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"response": "Failed to create user",
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"response": "Failed to create users - " + err.Error(),
 			})
 			return
 		}
@@ -58,7 +58,7 @@ func CreateUser(as auth.Service) gin.HandlerFunc {
 		if err != nil {
 			fmt.Println("ERROR: CreateUser - password encryption failed - " + err.Error())
 
-			ctx.JSON(http.StatusBadRequest, gin.H{
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"response": "Failed to create user - failed to encrypt password",
 			})
 			return
@@ -66,15 +66,18 @@ func CreateUser(as auth.Service) gin.HandlerFunc {
 
 		user.UserDetails.Password = string(_pass)
 
-		if err = as.CreateUser(user); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"response": "Failed to create user",
+		var tokenStr string = ""
+
+		if tokenStr, err = as.CreateUser(user); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"response": "Failed to create user - " + err.Error(),
 			})
 			return
 		}
 
-		ctx.JSON(http.StatusCreated, gin.H{
+		ctx.AbortWithStatusJSON(http.StatusAccepted, gin.H{
 			"response": "Successfully created user",
+			"token":    tokenStr,
 		})
 
 	}

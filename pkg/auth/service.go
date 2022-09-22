@@ -24,7 +24,7 @@ type Repository interface {
 
 // provide listing operations for authenticating/authorizing users
 type Service interface {
-	CreateUser(UserRegister) error
+	CreateUser(UserRegister) (string, error)
 	CreatePatient(PatientRegister) error
 	CreateDoctor(DoctorRegister) error
 	CreateClinicAdmin(ClinicAdminRegister) error
@@ -55,7 +55,7 @@ func (s *service) LoginUser(loginCredentials UserLogin) (string, error) {
 	// find user
 	_user, err := s.repo.GetUser(loginCredentials.Email)
 	if err != nil {
-		return tokenStr, errors.New("ERROR: LoginUser - Failed to find user - " + err.Error())
+		return tokenStr, errors.New("LoginUser - Failed to find user - " + err.Error())
 	}
 
 	// map user
@@ -71,7 +71,7 @@ func (s *service) LoginUser(loginCredentials UserLogin) (string, error) {
 	// authenticate user
 	err = s.AuthenticateUser(loginCredentials, user)
 	if err != nil {
-		return tokenStr, errors.New("ERROR: LoginUser - Failed to authenticate user - " + err.Error())
+		return tokenStr, errors.New("LoginUser - Failed to authenticate user - " + err.Error())
 	}
 
 	// define the custom token claims
@@ -85,7 +85,7 @@ func (s *service) LoginUser(loginCredentials UserLogin) (string, error) {
 	tokenStr, err = s.GenerateJWT(claims)
 
 	if err != nil {
-		return tokenStr, errors.New("ERROR: LoginUser - Failed to generate jwt token - " + err.Error())
+		return tokenStr, errors.New("LoginUser - Failed to generate jwt token - " + err.Error())
 	}
 
 	return tokenStr, nil
@@ -129,7 +129,28 @@ func (s *service) AuthorizeUser(authorizedRole string, userRole string) (bool, e
 }
 
 // implement service methods
-func (s *service) CreateUser(user UserRegister) error {
+func (s *service) CreateUser(user UserRegister) (string, error) {
+	var tokenStr string = ""
+
+	// check if user exists
+	_user, _ := s.repo.GetUser(user.UserDetails.Email)
+	if _user != (postgres.User{}) {
+		return tokenStr, errors.New("ERROR: CreateUser - user with email '" + user.UserDetails.Email + "' already exists. Try to login instead.")
+	}
+
+	// define the custom token claims
+	var claims = &Claims{}
+	claims.UserID = user.UserDetails.ID
+	claims.Email = user.UserDetails.Email
+	claims.Role = user.UserDetails.Role
+	claims.Name = user.UserDetails.FirstName + " " + user.UserDetails.LastName
+
+	// generate jwt token
+	tokenStr, err := s.GenerateJWT(claims)
+
+	if err != nil {
+		return tokenStr, errors.New("ERROR: LoginUser - Failed to generate jwt token - " + err.Error())
+	}
 
 	// parse user to the role's corresponding model - patient, doctor or clinic admin
 	// then call the corresponding functions to create those models and commit to db
@@ -145,7 +166,7 @@ func (s *service) CreateUser(user UserRegister) error {
 		_patient.UserDetails.Password = user.UserDetails.Password
 		_patient.UserDetails.Role = user.UserDetails.Role
 
-		return s.CreatePatient(_patient)
+		return tokenStr, s.CreatePatient(_patient)
 
 	} else if user.UserDetails.Role == Roles.Doctor {
 		var _doctor DoctorRegister
@@ -159,7 +180,7 @@ func (s *service) CreateUser(user UserRegister) error {
 		_doctor.UserDetails.Password = user.UserDetails.Password
 		_doctor.UserDetails.Role = user.UserDetails.Role
 
-		return s.CreateDoctor(_doctor)
+		return tokenStr, s.CreateDoctor(_doctor)
 
 	} else if user.UserDetails.Role == Roles.ClinicAdmin {
 		var _clinicAdmin ClinicAdminRegister
@@ -173,10 +194,10 @@ func (s *service) CreateUser(user UserRegister) error {
 		_clinicAdmin.UserDetails.Role = user.UserDetails.Role
 		_clinicAdmin.UserDetails.FirstName = user.UserDetails.FirstName
 
-		return s.CreateClinicAdmin(_clinicAdmin)
+		return tokenStr, s.CreateClinicAdmin(_clinicAdmin)
 
 	} else {
-		return errors.New("ERROR: CreateUser - role '" + user.UserDetails.Role + "' does not exist")
+		return tokenStr, errors.New("ERROR: CreateUser - role '" + user.UserDetails.Role + "' does not exist")
 	}
 
 }

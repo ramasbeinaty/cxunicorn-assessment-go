@@ -16,11 +16,6 @@ type Claims struct {
 	StandardClaims jwt.StandardClaims
 }
 
-var (
-	SECRET_KEY      = os.Getenv("SECRET_KEY")
-	EXPIRY_DURATION = os.Getenv("EXPIRY_DURATION")
-)
-
 func (c Claims) verifyRole(required bool) bool {
 	if c.Role == "" {
 		return !required
@@ -46,6 +41,9 @@ func (c Claims) Valid() error {
 func (s *service) GenerateJWT(claims *Claims) (string, error) {
 	tokenStr := ""
 
+	SECRET_KEY := os.Getenv("SECRET_KEY")
+	EXPIRY_DURATION := os.Getenv("EXPIRY_DURATION")
+
 	// parse and define an expiration duration of the token
 	_expiryDuration, err := time.ParseDuration(EXPIRY_DURATION)
 
@@ -70,6 +68,8 @@ func (s *service) GenerateJWT(claims *Claims) (string, error) {
 
 func (s *service) GetTokenFromString(tokenStr string, claims *Claims) (*jwt.Token, error) {
 	return jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		SECRET_KEY := os.Getenv("SECRET_KEY")
+
 		// validate that the alg is what you expect
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("GetTokenFromString - Unexpected signing method")
