@@ -16,7 +16,7 @@ import (
 func AuthorizeUser(as auth.Service, authorizedRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
-		userRole := ctx.Keys["Roles"].(string)
+		userRole := ctx.Keys["Role"].(string)
 
 		isAuthorized, _ := as.AuthorizeUser(userRole, authorizedRole)
 
@@ -27,9 +27,9 @@ func AuthorizeUser(as auth.Service, authorizedRole string) gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusAccepted, gin.H{
-			"response": "Authorized access",
-		})
+		// ctx.JSON(http.StatusAccepted, gin.H{
+		// 	"response": "Authorized access",
+		// })
 
 	}
 }
