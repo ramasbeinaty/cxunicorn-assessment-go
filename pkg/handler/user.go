@@ -9,10 +9,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserRole struct {
-	Role string `json:"role"`
-}
-
 func LoginUser(as auth.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var user auth.UserLogin

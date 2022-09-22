@@ -4,6 +4,8 @@ import (
 	"clinicapp/pkg/storage/postgres"
 	"encoding/json"
 	"errors"
+	"os"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
@@ -91,6 +93,64 @@ func (s *service) LoginUser(loginCredentials UserLogin) (string, error) {
 	return tokenStr, nil
 }
 
+func (s *service) GenerateJWT(claims *Claims) (string, error) {
+	tokenStr := ""
+
+	SECRET_KEY := os.Getenv("SECRET_KEY")
+	EXPIRY_DURATION := os.Getenv("EXPIRY_DURATION")
+
+	// parse and define an expiration duration of the token
+	_expiryDuration, err := time.ParseDuration(EXPIRY_DURATION)
+
+	if err != nil {
+		return tokenStr, errors.New("ERROR: GenerateJWT - Failed to parse expiry string to type duration -" + err.Error())
+	}
+
+	expiresAt := time.Now().UTC().Add(time.Minute * time.Duration(_expiryDuration)).Unix()
+
+	// update the token claim with the expiration time
+	claims.StandardClaims.ExpiresAt = expiresAt
+
+	_token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenStr, err = _token.SignedString([]byte(SECRET_KEY))
+	if err != nil {
+		return tokenStr, errors.New("GenerateJWT - " + err.Error())
+	}
+
+	return tokenStr, nil
+}
+
+func (s *service) GetTokenFromString(tokenStr string, claims *Claims) (*jwt.Token, error) {
+	return jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		SECRET_KEY := os.Getenv("SECRET_KEY")
+
+		// validate that the alg is what you expect
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("GetTokenFromString - Unexpected signing method")
+		}
+
+		// hmacSampleSecret is a []byte containing secret key, e.g. []byte("my_secret_key")
+		return []byte(SECRET_KEY), nil
+	})
+}
+
+func (s *service) VerifyJWT(tokenStr string) (bool, *Claims) {
+	// validate generated jwt token
+
+	claims := &Claims{}
+	token, _ := s.GetTokenFromString(tokenStr, claims)
+
+	if token.Valid {
+		token.Claims.Valid()
+		if err := claims.Valid(); err != nil {
+			return false, claims
+		}
+	}
+
+	return true, claims
+}
+
 func (s *service) AuthenticateUser(loginCredentials UserLogin, user User) error {
 
 	// decrypt received password and check if equal
@@ -135,7 +195,7 @@ func (s *service) CreateUser(user UserRegister) (string, error) {
 	// check if user exists
 	_user, _ := s.repo.GetUser(user.UserDetails.Email)
 	if _user != (postgres.User{}) {
-		return tokenStr, errors.New("ERROR: CreateUser - user with email '" + user.UserDetails.Email + "' already exists. Try to login instead.")
+		return tokenStr, errors.New("CreateUser - user with email '" + user.UserDetails.Email + "' already exists. Try to login instead.")
 	}
 
 	// define the custom token claims
@@ -149,7 +209,7 @@ func (s *service) CreateUser(user UserRegister) (string, error) {
 	tokenStr, err := s.GenerateJWT(claims)
 
 	if err != nil {
-		return tokenStr, errors.New("ERROR: LoginUser - Failed to generate jwt token - " + err.Error())
+		return tokenStr, errors.New("LoginUser - Failed to generate jwt token - " + err.Error())
 	}
 
 	// parse user to the role's corresponding model - patient, doctor or clinic admin
@@ -197,7 +257,7 @@ func (s *service) CreateUser(user UserRegister) (string, error) {
 		return tokenStr, s.CreateClinicAdmin(_clinicAdmin)
 
 	} else {
-		return tokenStr, errors.New("ERROR: CreateUser - role '" + user.UserDetails.Role + "' does not exist")
+		return tokenStr, errors.New("CreateUser - role '" + user.UserDetails.Role + "' does not exist")
 	}
 
 }
@@ -219,7 +279,7 @@ func (s *service) CreatePatient(patient PatientRegister) error {
 	user_id, err := s.repo.CreateUser(_user)
 
 	if err != nil {
-		return errors.New("ERROR: CreatePatient - " + err.Error())
+		return errors.New("CreatePatient - " + err.Error())
 	}
 
 	// patient details
@@ -247,7 +307,7 @@ func (s *service) CreateDoctor(doctor DoctorRegister) error {
 	user_id, err := s.repo.CreateUser(_user)
 
 	if err != nil {
-		return errors.New("ERROR: CreateDoctor - " + err.Error())
+		return errors.New("CreateDoctor - " + err.Error())
 	}
 
 	// staff details
@@ -285,7 +345,7 @@ func (s *service) CreateClinicAdmin(clinicAdmin ClinicAdminRegister) error {
 	user_id, err := s.repo.CreateUser(_user)
 
 	if err != nil {
-		return errors.New("ERROR: CreateDoctor - " + err.Error())
+		return errors.New("CreateDoctor - " + err.Error())
 	}
 
 	// staff details
