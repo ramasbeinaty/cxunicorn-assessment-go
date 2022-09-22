@@ -6,7 +6,7 @@ func newRoleRegistry() *roleRegistry {
 	return &roleRegistry{
 		Patient:     "patient",
 		Doctor:      "doctor",
-		ClinicAdmin: "ClinicAdmin",
+		ClinicAdmin: "clinic_admin",
 	}
 }
 
