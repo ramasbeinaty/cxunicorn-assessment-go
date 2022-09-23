@@ -1,6 +1,8 @@
 package listing
 
-import "time"
+import (
+	"time"
+)
 
 // defines the doctor properties to be listed
 type Doctor struct {

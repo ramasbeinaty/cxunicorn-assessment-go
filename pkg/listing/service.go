@@ -30,13 +30,19 @@ type Service interface {
 	GetAvailableSlotsPerDay(int, time.Time) [][]time.Time
 }
 
+type Cache interface {
+	GetDoctor(int) (Doctor, error)
+	SetDoctor(Doctor) error
+}
+
 type service struct {
-	repo Repository
+	repo  Repository
+	cache Cache
 }
 
 // creates a listing service with the necessary dependencies
-func NewService(repo Repository) Service {
-	return &service{repo}
+func NewService(repo Repository, cache Cache) Service {
+	return &service{repo, cache}
 }
 
 // implement service methods
@@ -45,6 +51,16 @@ func (s *service) GetDoctor(id int) (Doctor, error) {
 	var doctor Doctor
 	var err error
 
+	// try to get doctor from cache memory
+	doctor, err = s.cache.GetDoctor(id)
+
+	// if doctor with specified id is found in cache, return it
+	if err == nil {
+		println("INFO: doctor extracted from cache memory")
+		return doctor, nil
+	}
+
+	// else get doctor from repo
 	d, err = s.repo.GetDoctor(id)
 
 	doctor.ID = d.ID
@@ -55,6 +71,13 @@ func (s *service) GetDoctor(id int) (Doctor, error) {
 
 	if err != nil {
 		return doctor, errors.New("GetDoctor - " + err.Error())
+	}
+
+	// then store it in cache
+	err = s.cache.SetDoctor(doctor)
+
+	if err != nil {
+		return doctor, err
 	}
 
 	return doctor, nil

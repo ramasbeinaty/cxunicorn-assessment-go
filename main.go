@@ -9,6 +9,7 @@ import (
 	"clinicapp/pkg/editing"
 	"clinicapp/pkg/handler"
 	"clinicapp/pkg/listing"
+	"clinicapp/pkg/storage/cache"
 	"clinicapp/pkg/storage/postgres"
 
 	_ "github.com/gin-gonic/gin"
@@ -22,21 +23,18 @@ func main() {
 	// migration.MigrateDown()
 	// migration.MigrateUp()
 
-	// loc, err := time.LoadLocation("UTC")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	// time.Local = loc
-
+	// define the storages
 	s, _ := postgres.NewStorage()
-	lister := listing.NewService(s)
+	c := cache.NewCacheMem()
+
+	// define the services
+	lister := listing.NewService(s, c)
 	booker := booking.NewService(s)
 	canceler := canceling.NewService(s)
 	deleter := deleting.NewService(s)
 	editer := editing.NewService(s)
 	authenticator := auth.NewService(s)
 
+	// define the handlers
 	handler.Handler(lister, booker, canceler, deleter, editer, authenticator)
 }
