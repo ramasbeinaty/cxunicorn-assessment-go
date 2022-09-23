@@ -10,9 +10,5 @@ type User struct {
 	DOB         time.Time `json:"dob"`
 	PhoneNumber string    `json:"phone_number"`
 	Email       string    `json:"email"`
-	Password    string    `json:"password"`
 	Role        string    `json:"role"`
-	CreatedAt   time.Time `json:"created_at"`
-	IsActive    bool      `json:"is_active"`
-	IsVerified  bool      `json:"is_verified"`
 }

@@ -1,6 +1,7 @@
 package listing
 
 import (
+	"clinicapp/pkg/storage/cache"
 	"clinicapp/pkg/storage/postgres"
 	"errors"
 	"fmt"
@@ -31,8 +32,8 @@ type Service interface {
 }
 
 type Cache interface {
-	GetDoctor(int) (Doctor, error)
-	SetDoctor(Doctor) error
+	GetDoctor(int) (cache.Doctor, error)
+	SetDoctor(postgres.Doctor)
 }
 
 type service struct {
@@ -48,15 +49,23 @@ func NewService(repo Repository, cache Cache) Service {
 // implement service methods
 func (s *service) GetDoctor(id int) (Doctor, error) {
 	var d postgres.Doctor
+	var cachedD cache.Doctor
 	var doctor Doctor
 	var err error
 
 	// try to get doctor from cache memory
-	doctor, err = s.cache.GetDoctor(id)
+	cachedD, err = s.cache.GetDoctor(id)
 
 	// if doctor with specified id is found in cache, return it
 	if err == nil {
 		println("INFO: doctor extracted from cache memory")
+
+		doctor.ID = cachedD.ID
+		doctor.Email = cachedD.Email
+		doctor.FirstName = cachedD.FirstName
+		doctor.LastName = cachedD.LastName
+		doctor.Specialization = cachedD.Specialization
+
 		return doctor, nil
 	}
 
@@ -74,11 +83,7 @@ func (s *service) GetDoctor(id int) (Doctor, error) {
 	}
 
 	// then store it in cache
-	err = s.cache.SetDoctor(doctor)
-
-	if err != nil {
-		return doctor, err
-	}
+	s.cache.SetDoctor(d)
 
 	return doctor, nil
 }
