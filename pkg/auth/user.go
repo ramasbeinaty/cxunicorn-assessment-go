@@ -23,9 +23,3 @@ type UserLogin struct {
 	Password string `json:"password" db:"password"`
 	// Token    string `json:"token"`
 }
-
-type UserAuthorization struct {
-	isPatient bool
-	isDoctor bool
-	
-}

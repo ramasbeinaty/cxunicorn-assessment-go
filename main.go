@@ -11,6 +11,7 @@ import (
 	"clinicapp/pkg/listing"
 	"clinicapp/pkg/storage/cache"
 	"clinicapp/pkg/storage/postgres"
+	"log"
 
 	_ "github.com/gin-gonic/gin"
 )
@@ -24,8 +25,15 @@ func main() {
 	// migration.MigrateUp()
 
 	// define the storages
-	s, _ := postgres.NewStorage()
-	c := cache.NewCacheMem()
+	s, err := postgres.NewStorage()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c, err := cache.NewCacheMem()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// define the services
 	lister := listing.NewService(s, c)

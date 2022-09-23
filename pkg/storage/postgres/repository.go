@@ -4,7 +4,6 @@ import (
 	"clinicapp/pkg/storage/postgres/utils"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -42,7 +41,7 @@ func NewStorage() (*Storage, error) {
 	// s.DB, err = sql.Open("postgres", "postgres://postgres:123456@localhost:5432/clinic_app2?sslmode=disable")
 
 	if err != nil {
-		log.Fatal("Failed to connect to database")
+		return s, errors.New("failed to connect to database - " + err.Error())
 	}
 
 	// defer s.DB.Close()

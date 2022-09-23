@@ -96,14 +96,14 @@ func (s *service) LoginUser(loginCredentials UserLogin) (string, error) {
 func (s *service) GenerateJWT(claims *Claims) (string, error) {
 	tokenStr := ""
 
-	SECRET_KEY := os.Getenv("SECRET_KEY")
-	EXPIRY_DURATION := os.Getenv("EXPIRY_DURATION")
+	SECRET_KEY := os.Getenv("TOKEN_SECRET_KEY")
+	EXPIRY_DURATION := os.Getenv("TOKEN_EXPIRY_DURATION")
 
 	// parse and define an expiration duration of the token
 	_expiryDuration, err := time.ParseDuration(EXPIRY_DURATION)
 
 	if err != nil {
-		return tokenStr, errors.New("ERROR: GenerateJWT - Failed to parse expiry string to type duration -" + err.Error())
+		return tokenStr, errors.New("ERROR: GenerateJWT - Failed to parse expiry duration of type string to type duration -" + err.Error())
 	}
 
 	expiresAt := time.Now().UTC().Add(time.Minute * time.Duration(_expiryDuration)).Unix()
@@ -123,7 +123,7 @@ func (s *service) GenerateJWT(claims *Claims) (string, error) {
 
 func (s *service) GetTokenFromString(tokenStr string, claims *Claims) (*jwt.Token, error) {
 	return jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		SECRET_KEY := os.Getenv("SECRET_KEY")
+		SECRET_KEY := os.Getenv("TOKEN_SECRET_KEY")
 
 		// validate that the alg is what you expect
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
