@@ -45,8 +45,8 @@ func main() {
 	authenticator := auth.NewService(s)
 
 	// define app insights
-	telemeter := middleware.NewTelemetryClient()
+	telemeter := middleware.NewTelemetry()
 
 	// define the handlers
-	handler.Handler(lister, booker, canceler, deleter, editer, authenticator, telemeter.Client)
+	handler.Handler(lister, booker, canceler, deleter, editer, authenticator, *telemeter)
 }
