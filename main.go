@@ -9,7 +9,7 @@ import (
 	"clinicapp/pkg/editing"
 	"clinicapp/pkg/handler"
 	"clinicapp/pkg/listing"
-	"clinicapp/pkg/middleware"
+	"clinicapp/pkg/logging"
 	"clinicapp/pkg/storage/cache"
 	"clinicapp/pkg/storage/postgres"
 	"log"
@@ -45,8 +45,8 @@ func main() {
 	authenticator := auth.NewService(s)
 
 	// define app insights
-	telemeter := middleware.NewTelemetry()
+	telemeter := logging.NewTelemetry()
 
 	// define the handlers
-	handler.Handler(lister, booker, canceler, deleter, editer, authenticator, *telemeter)
+	handler.Handler(lister, booker, canceler, deleter, editer, authenticator, telemeter)
 }
