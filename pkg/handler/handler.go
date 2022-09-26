@@ -10,10 +10,11 @@ import (
 	"clinicapp/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
 
 func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
-	ds deleting.Service, es editing.Service, as auth.Service) {
+	ds deleting.Service, es editing.Service, as auth.Service, tc appinsights.TelemetryClient) {
 
 	router := gin.Default()
 
@@ -23,7 +24,7 @@ func Handler(ls listing.Service, bs booking.Service, cs canceling.Service,
 		authRoute := superRoute.Group("/auth")
 		{
 			authRoute.POST("/register", CreateUser(as))
-			authRoute.POST("/login", LoginUser(as))
+			authRoute.POST("/login", handleRequestWithLog(LoginUser(as), tc))
 		}
 
 		doctorRoute := superRoute.Group("/doctors")

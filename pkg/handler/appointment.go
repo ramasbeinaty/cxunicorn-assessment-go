@@ -15,8 +15,6 @@ import (
 
 func CreateAppointment(bs booking.Service) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// var hi = ctx.PostForm("data")
-		// var bye = ctx.PostForm("patient_id")
 
 		var appointment booking.Appointment
 
@@ -24,13 +22,6 @@ func CreateAppointment(bs booking.Service) gin.HandlerFunc {
 			fmt.Println("ERROR: CreateAppointment - ", err.Error())
 			return
 		}
-
-		// _appointment := booking.Appointment{}
-		// _appointment.PatientID, _ = strconv.Atoi(ctx.PostForm("patient_id"))
-		// _appointment.DoctorID, _ = strconv.Atoi(ctx.PostForm("doctor_id"))
-		// _appointment.CreatedBy, _ = strconv.Atoi(ctx.PostForm("created_by"))
-		// _appointment.StartDatetime, _ = time.Parse(time.RFC822, ctx.PostForm(("start_datetime")))
-		// _appointment.EndDatetime, _ = time.Parse(time.RFC822, ctx.PostForm(("end_datetime")))
 
 		if err := bs.CreateAppointment(appointment); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
